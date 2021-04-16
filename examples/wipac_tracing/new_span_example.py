@@ -2,13 +2,16 @@
 
 
 import logging
+import os
 import sys
 
 import coloredlogs  # type: ignore[import]
 
 sys.path.append(".")
-
 import wipac_tracing  # noqa: E402 # pylint: disable=C0413,E0401
+
+if not os.getcwd().endswith("/wipac-telemetry-prototype"):
+    raise RuntimeError("Script needs to be ran from root of repository.")
 
 
 @wipac_tracing.tools.new_span()  # type: ignore[misc]
