@@ -8,13 +8,13 @@ import sys
 import coloredlogs  # type: ignore[import]
 
 sys.path.append(".")
-import wipac_tracing  # noqa: E402 # pylint: disable=C0413,E0401
+from wipac_telemetry import tracing  # noqa: E402 # pylint: disable=C0413,E0401
 
 if not os.getcwd().endswith("/wipac-telemetry-prototype"):
     raise RuntimeError("Script needs to be ran from root of repository.")
 
 
-@wipac_tracing.tools.new_span()  # type: ignore[misc]
+@tracing.tools.new_span()  # type: ignore[misc]
 def example_1_with_no_args() -> None:
     """Print and log simple message."""
     msg = "Hello World!"
@@ -22,7 +22,7 @@ def example_1_with_no_args() -> None:
     logging.info(msg)
 
 
-@wipac_tracing.tools.new_span("my-span")  # type: ignore[misc]
+@tracing.tools.new_span("my-span")  # type: ignore[misc]
 def example_2_with_span_name() -> None:
     """Print and log simple message."""
     msg = "Hello World!"
@@ -30,7 +30,7 @@ def example_2_with_span_name() -> None:
     logging.info(msg)
 
 
-@wipac_tracing.tools.new_span("my-third-span", "a-new-tracer")  # type: ignore[misc]
+@tracing.tools.new_span("my-third-span", "a-new-tracer")  # type: ignore[misc]
 def example_3_with_span_and_tracer_name() -> None:
     """Print and log simple message."""
     msg = "Hello World!"
@@ -38,7 +38,7 @@ def example_3_with_span_and_tracer_name() -> None:
     logging.info(msg)
 
 
-@wipac_tracing.tools.new_span()  # type: ignore[misc]
+@tracing.tools.new_span()  # type: ignore[misc]
 def example_4_with_an_uncaught_error() -> None:
     """Print and log simple message."""
     msg = "Hello World! I'm about to raise a FileNotFoundError"
@@ -47,7 +47,7 @@ def example_4_with_an_uncaught_error() -> None:
     raise FileNotFoundError("My FileNotFoundError message")
 
 
-@wipac_tracing.tools.new_span()  # type: ignore[misc]
+@tracing.tools.new_span()  # type: ignore[misc]
 def example_5_with_a_caught_error() -> None:
     """Print and log simple message."""
     msg = "Hello World! I'm about to catch my ValueError"
@@ -59,7 +59,7 @@ def example_5_with_a_caught_error() -> None:
         logging.info(f"I caught this: `{e}`")
 
 
-@wipac_tracing.tools.new_span()  # type: ignore[misc]
+@tracing.tools.new_span()  # type: ignore[misc]
 def example_6_nested_spans() -> None:
     """Print and log simple message."""
     msg = "Hello World! I'm about to call another spanned function w/ the same tracer name/id"

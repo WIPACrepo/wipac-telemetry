@@ -11,7 +11,7 @@ from setuptools import setup  # type: ignore[import]
 HERE = os.path.abspath(os.path.dirname(__file__))
 OLDEST_PY_VERSION: Tuple[int, int] = (3, 6)
 PY_VERSION: Tuple[int, int] = (3, 8)
-NAME = "wipac-telemetry-prototype"
+PACKAGE_NAME = "wipac_telemetry"
 REQUIREMENTS_PATH = os.path.join(HERE, "requirements.txt")
 REQUIREMENTS = open(REQUIREMENTS_PATH).read().splitlines()
 
@@ -19,7 +19,7 @@ REQUIREMENTS = open(REQUIREMENTS_PATH).read().splitlines()
 # Check Python Version -----------------------------------------------------------------
 if sys.version_info < OLDEST_PY_VERSION:
     print(
-        f"ERROR: {NAME} requires at least Python {OLDEST_PY_VERSION[0]}.{OLDEST_PY_VERSION[1]}+ to run "
+        f"ERROR: {PACKAGE_NAME} requires at least Python {OLDEST_PY_VERSION[0]}.{OLDEST_PY_VERSION[1]}+ to run "
         f"( {sys.version_info} < {OLDEST_PY_VERSION} )"
     )
     sys.exit(1)
@@ -29,7 +29,7 @@ if sys.version_info < OLDEST_PY_VERSION:
 
 
 def _get_version() -> str:
-    with open(os.path.join(HERE, NAME, "wipac_tracing", "__init__.py")) as init_f:
+    with open(os.path.join(HERE, PACKAGE_NAME, "__init__.py")) as init_f:
         for line in init_f.readlines():
             if "__version__" in line:
                 # grab "X.Y.Z" from "__version__ = 'X.Y.Z'" (quote-style insensitive)
@@ -91,7 +91,7 @@ def _development_status() -> str:
 # Setup --------------------------------------------------------------------------------
 
 setup(
-    name=NAME,
+    name=PACKAGE_NAME,
     version=_get_version(),
     description="File Catalog",
     long_description=open(os.path.join(HERE, "README.md")).read(),  # include new-lines
@@ -104,8 +104,8 @@ setup(
         + ["License :: OSI Approved :: MIT License"]
     ),
     keywords="wipac telemetry opentelemetry",
-    packages=["wipac_tracing"],
+    packages=["wipac_telemetry", "wipac_telemetry.tracing"],
     install_requires=_get_pypi_requirements(),
     dependency_links=_get_git_requirements(),
-    package_data={NAME: ["py.typed"]},
+    package_data={PACKAGE_NAME: ["py.typed"]},
 )

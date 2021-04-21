@@ -1,8 +1,3 @@
-"""Init."""
-
-
-from . import tools  # noqa
-
 # version is a human-readable version number.
 
 # version_info is a four-tuple for programmatic comparison. The first
