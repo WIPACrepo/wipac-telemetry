@@ -43,7 +43,7 @@ def new_span(
 
             tracer = trace.get_tracer(_tracer)
             with tracer.start_as_current_span(_span):
-                function(*args, **kwargs)
+                return function(*args, **kwargs)
 
         return wrapper
 
