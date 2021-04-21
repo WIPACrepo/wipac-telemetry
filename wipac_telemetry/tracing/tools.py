@@ -48,3 +48,8 @@ def new_span(
         return wrapper
 
     return inner_function
+
+
+def get_current_span() -> trace.Span:
+    """Get the current span instance."""
+    return trace.get_current_span()
