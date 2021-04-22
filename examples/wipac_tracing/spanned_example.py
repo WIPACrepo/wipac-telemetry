@@ -8,11 +8,11 @@ from typing import Dict, List, Optional
 
 import coloredlogs  # type: ignore[import]
 
-sys.path.append(".")
-from wipac_telemetry import tracing  # noqa: E402 # pylint: disable=C0413,E0401
-
 if not os.getcwd().endswith("/wipac-telemetry-prototype"):
     raise RuntimeError("Script needs to be ran from root of repository.")
+
+sys.path.append(".")
+from wipac_telemetry import tracing  # noqa: E402 # pylint: disable=C0413,E0401
 
 
 @tracing.tools.spanned()
@@ -23,8 +23,19 @@ def example_1_with_no_args() -> None:
     logging.info(msg)
 
 
+class Example2:
+    """An example with an class instance method."""
+
+    @tracing.tools.spanned()
+    def example_2_instance_method(self) -> None:
+        """Print and log simple message."""
+        msg = "Hello World!"
+        print(msg)
+        logging.info(msg)
+
+
 @tracing.tools.spanned("my-span")
-def example_2_with_span_name() -> None:
+def example_3_with_span_name() -> None:
     """Print and log simple message."""
     msg = "Hello World!"
     print(msg)
@@ -163,7 +174,10 @@ if __name__ == "__main__":
     example_1_with_no_args()
 
     logging.warning("EXAMPLE #2")
-    example_2_with_span_name()
+    Example2().example_2_instance_method()
+
+    logging.warning("EXAMPLE #3")
+    example_3_with_span_name()
 
     logging.warning("EXAMPLE #4")
     try:

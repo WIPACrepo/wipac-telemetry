@@ -91,8 +91,8 @@ def spanned(
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            _span = span_name if span_name else func.__qualname__
-            _tracer = func.__module__
+            _span = span_name if span_name else func.__qualname__  # Ex: MyClass.method
+            _tracer = inspect.getfile(func)  # Ex: /path/to/source_file.py
             _attrs = _wrangle_attributes(
                 func, args, kwargs, attributes, use_args, these_args
             )
@@ -136,7 +136,7 @@ def evented(
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            _event = event_name if event_name else func.__qualname__
+            _event = event_name if event_name else func.__qualname__  # Ex: MyObj.method
             _attrs = _wrangle_attributes(
                 func, args, kwargs, attributes, use_args, these_args
             )
