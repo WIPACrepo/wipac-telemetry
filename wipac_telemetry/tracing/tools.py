@@ -1,6 +1,7 @@
 """Common tools for interacting with the OpenTelemetry Tracing API."""
 
 
+import collections
 import copy
 import inspect
 import logging
@@ -44,10 +45,12 @@ def _wrangle_attributes(
         for attr in list(raw):
             if isinstance(raw[attr], legal_types):
                 continue
-            if isinstance(raw[attr], list):  # all members are of same (legal) type
+            # check all members are of same (legal) type
+            if isinstance(raw[attr], collections.Sequence):
                 member_types = list(set(type(m) for m in raw[attr]))
                 if len(member_types) == 1 and member_types[0] in legal_types:
                     continue
+            # illegal type
             del raw[attr]
         return raw
 

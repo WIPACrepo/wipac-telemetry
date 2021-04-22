@@ -187,8 +187,8 @@ if __name__ == "__main__":
         "arg2",
         "arg3",
         a4={"dicts": "won't be", "added as": "attributes"},
-        a6=["but", "*homogeneous*", "lists", "will", "be attributes"],
-        a7=[1, 2, 3, 4, 5, 6],
+        a6=["*homogeneous*", "str/bool/int/float", "sequences will be attributes"],
+        a7=(1, 2, 3, 4, 5, 6),
         a5=55,
     )
 
@@ -199,8 +199,8 @@ if __name__ == "__main__":
         "arg2",
         "arg3",
         a4={"dicts": "won't be", "added as": "attributes"},
-        a6=["but", "*homogeneous*", "lists", "will", "be attributes"],
-        a7=[1, 2, 3, 4, 5, 6],
+        a6=["*homogeneous*", "str/bool/int/float", "sequences will be attributes"],
+        a7=(1, 2, 3, 4, 5, 6),
         a5=55,
     )
 
@@ -211,8 +211,8 @@ if __name__ == "__main__":
         "arg2",
         "arg3",
         a4={"dicts": "won't be", "added as": "attributes"},
-        a6=["but", "*homogeneous*", "lists", "will", "be attributes"],
-        a7=[1, 2, 3, 4, 5, 6],
+        a6=["*homogeneous*", "str/bool/int/float", "sequences will be attributes"],
+        a7=(1, 2, 3, 4, 5, 6),
         a5=55,
     )
 
@@ -223,8 +223,8 @@ if __name__ == "__main__":
         "arg2",
         "arg3",
         a4={"dicts": "won't be", "added as": "attributes"},
-        a6=["but", "*homogeneous*", "lists", "will", "be attributes"],
-        a7=[1, 2, 3, 4, 5, 6],
+        a6=["*homogeneous*", "str/bool/int/float", "sequences will be attributes"],
+        a7=(1, 2, 3, 4, 5, 6),
         a5=55,
     )
 
@@ -235,7 +235,7 @@ if __name__ == "__main__":
         "arg2",
         "arg3",
         a4={"dicts": "won't be", "added as": "attributes"},
-        a6=["but", "*homogeneous*", "lists", "will", "be attributes"],
-        a7=[1, 2, 3, 4, 5, 6],
+        a6=["*homogeneous*", "str/bool/int/float", "sequences will be attributes"],
+        a7=(1, 2, 3, 4, 5, 6),
         a5=55,
     )
