@@ -1,10 +1,11 @@
 """Common tools for interacting with the OpenTelemetry Tracing API."""
 
 
+import copy
 import inspect
 import logging
 from functools import wraps
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict, Optional
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
@@ -19,31 +20,41 @@ trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
 )
 
 
-def new_span(
-    span_name: Optional[str] = None, tracer_name: Optional[str] = None
+def _signature_vals(
+    function: Callable[..., Any], args: Any, kwargs: Any
+) -> Dict[str, Any]:
+    sig_vals = dict(zip(inspect.signature(function).parameters, args))
+    sig_vals.update(copy.deepcopy(kwargs))
+    return sig_vals
+
+
+def spanned(
+    span_name: Optional[str] = None, attributes: Optional[Dict[str, Any]] = None
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
     If `span_name` is not provided, the wrapped function's
-    name will be used. If `tracer_name` is not provided,
-    the wrapped function's filename will be used.
+    qualified name will be used. If `attributes` is not provided,
+    the wrapped function's signature and argument values will
+    be used.
 
     Wraps a `tracer.start_as_current_span()` context.
     """
 
-    def inner_function(function: Callable[..., Any]) -> Callable[..., Any]:
-        @wraps(function)
+    def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            _span = span_name if span_name else function.__name__
-            _tracer = tracer_name if tracer_name else inspect.getfile(function)
+            _span = span_name if span_name else func.__qualname__
+            _tracer = func.__module__
+            _attrs = attributes if attributes else _signature_vals(func, args, kwargs)
 
             logging.getLogger("wipac-telemetry").debug(
                 f"Started span `{_span}` for tracer `{_tracer}`"
             )
 
             tracer = trace.get_tracer(_tracer)
-            with tracer.start_as_current_span(_span):
-                return function(*args, **kwargs)
+            with tracer.start_as_current_span(_span, attributes=_attrs):
+                return func(*args, **kwargs)
 
         return wrapper
 
