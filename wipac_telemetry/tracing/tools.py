@@ -7,7 +7,7 @@ import logging
 from functools import wraps
 from typing import Any, Callable, Dict, Optional
 
-from opentelemetry import trace
+from opentelemetry import trace  # type: ignore[import]
 from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
 from opentelemetry.sdk.trace.export import (  # type: ignore[import]
     ConsoleSpanExporter,
@@ -47,6 +47,9 @@ def spanned(
             _span = span_name if span_name else func.__qualname__
             _tracer = func.__module__
             _attrs = attributes if attributes else _signature_vals(func, args, kwargs)
+            print(_attrs)
+            print(dict(zip(inspect.signature(func).parameters, args)))
+            print(inspect.signature(func))
 
             logging.getLogger("wipac-telemetry").debug(
                 f"Started span `{_span}` for tracer `{_tracer}`"
