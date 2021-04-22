@@ -148,6 +148,6 @@ def evented(
     return inner_function
 
 
-def add_event(name: str, body: Dict[str, Any]) -> None:
+def add_event(name: str, attributes: types.Attributes) -> None:
     """Add an event to the current span."""
-    get_current_span().add_event(name, body)
+    get_current_span().add_event(name, attributes=attributes)
