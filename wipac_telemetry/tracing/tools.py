@@ -21,6 +21,9 @@ trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
 )
 
 
+_LOGGER_NAME = "wipac-telemetry"
+
+
 def _wrangle_attributes(
     func: Callable[..., Any],
     args: Any,
@@ -91,7 +94,7 @@ def spanned(
                 func, args, kwargs, attributes, use_args, these_args
             )
 
-            logging.getLogger("wipac-telemetry").debug(
+            logging.getLogger(_LOGGER_NAME).debug(
                 f"Started span `{_span}` for tracer `{_tracer}` "
                 f"with these attributes: {_attributes_to_string(_attrs)}"
             )
@@ -135,7 +138,7 @@ def evented(
                 func, args, kwargs, attributes, use_args, these_args
             )
 
-            logging.getLogger("wipac-telemetry").debug(
+            logging.getLogger(_LOGGER_NAME).debug(
                 f"Recorded event `{_event}` for span `{get_current_span()}` "
                 f"with these attributes: {_attributes_to_string(_attrs)}"
             )
