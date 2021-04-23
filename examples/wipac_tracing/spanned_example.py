@@ -80,7 +80,7 @@ class _MyObject:
         self.msg = msg
 
 
-@tracing.tools.spanned()
+@tracing.tools.spanned(use_args=True)
 def example_7_attributes_from_sig_vals(  # pylint: disable=W0613,C0103,R0913
     a0: _MyObject,
     a1: str,
@@ -97,7 +97,7 @@ def example_7_attributes_from_sig_vals(  # pylint: disable=W0613,C0103,R0913
     logging.info(msg)
 
 
-@tracing.tools.spanned(attributes={"my": 1, "attributes": 2}, use_args=False)
+@tracing.tools.spanned(attributes={"my": 1, "attributes": 2})
 def example_8_attributes_only_explicit(  # pylint: disable=W0613,C0103,R0913
     a0: _MyObject,
     a1: str,
@@ -114,7 +114,7 @@ def example_8_attributes_only_explicit(  # pylint: disable=W0613,C0103,R0913
     logging.info(msg)
 
 
-@tracing.tools.spanned(attributes={"my": 1, "attributes": 2})
+@tracing.tools.spanned(attributes={"my": 1, "attributes": 2}, use_args=True)
 def example_9_attributes_explicit_and_args(  # pylint: disable=W0613,C0103,R0913
     a0: _MyObject,
     a1: str,
@@ -150,7 +150,7 @@ def example_10_attributes_explicit_and_whitelisted_args(  # pylint: disable=W061
     logging.info(msg)
 
 
-@tracing.tools.spanned(use_args=False)
+@tracing.tools.spanned()
 def example_11_no_attributes(  # pylint: disable=W0613,C0103,R0913
     a0: _MyObject,
     a1: str,

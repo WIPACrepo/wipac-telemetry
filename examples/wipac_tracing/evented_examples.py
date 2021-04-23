@@ -45,7 +45,7 @@ class EventExampleClass:
         """Print from this evented & spanned instance method."""
         print(beatle)
 
-    @tracing.tools.spanned()
+    @tracing.tools.spanned(use_args=True)
     def spanned_caller_method(self, album: str, year: int) -> None:
         """Call evented methods/functions in this method."""
         print(album)

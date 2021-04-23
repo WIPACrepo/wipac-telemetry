@@ -74,7 +74,7 @@ def _attributes_to_string(attributes: types.Attributes) -> str:
 def spanned(
     span_name: Optional[str] = None,
     attributes: types.Attributes = None,
-    use_args: bool = True,
+    use_args: bool = False,
     these_args: Optional[List[str]] = None,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
@@ -119,7 +119,7 @@ def get_current_span() -> trace.Span:
 def evented(
     event_name: Optional[str] = None,
     attributes: types.Attributes = None,
-    use_args: bool = True,
+    use_args: bool = False,
     these_args: Optional[List[str]] = None,
 ) -> Callable[..., Any]:
     """Decorate to trace a function as a new event.
