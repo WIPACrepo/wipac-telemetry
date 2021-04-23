@@ -54,13 +54,13 @@ def _wrangle_attributes(
             del raw[attr]
         return raw
 
-    if attributes:
-        raw.update(attributes)
-
     if these_args:
         raw.update({k: v for k, v in _signature_vals().items() if k in these_args})
     elif use_args:
         raw.update(_signature_vals())
+
+    if attributes:
+        raw.update(attributes)
 
     return _convert_to_attributes()
 
