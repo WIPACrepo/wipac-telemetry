@@ -142,7 +142,7 @@ def evented(
             )
 
             logging.getLogger(_LOGGER_NAME).debug(
-                f"Recorded event `{_event}` for span `{get_current_span()}` "
+                f"Recorded event `{_event}` for span `{get_current_span().name}` "
                 f"with these attributes: {_attributes_to_string(_attrs)}"
             )
 
