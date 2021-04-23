@@ -36,7 +36,7 @@ class DemoPitfallsClass:
     @staticmethod
     @tracing.tools.spanned(inject=True)
     def static_start_span(
-        inst: "SpanInjectionExampleClass", span: tracing.tools.OptSpan = None
+        inst: "DemoPitfallsClass", span: tracing.tools.OptSpan = None
     ) -> None:
         """Inject span then pass into instance."""
         inst.span = span
