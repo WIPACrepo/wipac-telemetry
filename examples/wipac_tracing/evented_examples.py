@@ -12,6 +12,8 @@ if not os.getcwd().endswith("/wipac-telemetry-prototype"):
 sys.path.append(".")
 from wipac_telemetry import tracing  # noqa: E402 # pylint: disable=C0413,E0401
 
+########################################################################################
+
 
 @tracing.tools.evented(attributes={"city": "Liverpool"})
 def evented_outer_function(beatle: str) -> None:
@@ -28,7 +30,7 @@ class EventExampleClass:
         print(beatle)
 
     @staticmethod
-    @tracing.tools.evented()
+    @tracing.tools.evented(name="static-method-001")
     def evented_fellow_static_method(beatle: str) -> None:
         """Print from this evented static method."""
         print(beatle)
@@ -70,7 +72,7 @@ class EventExampleClass:
 if __name__ == "__main__":
     coloredlogs.install(level="DEBUG")
 
-    logging.warning("EXAMPLE CLASS METHOD #1")
+    logging.warning("EXAMPLE #1 - CLASS METHOD")
     EventExampleClass().spanned_caller_method(
         "Sgt. Pepper's Lonely Hearts Club Band", 1967
     )

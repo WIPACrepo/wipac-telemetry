@@ -6,7 +6,7 @@ import inspect
 import logging
 from collections.abc import Sequence
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
@@ -24,11 +24,17 @@ trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
 
 _LOGGER_NAME = "wipac-telemetry"
 
+Args = Tuple[Any, ...]
+Kwargs = Dict[str, Any]
+
+Span = trace.Span  # alias for easy importing
+OptSpan = Optional[Span]  # alias used for Span-argument injection
+
 
 def _wrangle_attributes(
     func: Callable[..., Any],
-    args: Any,
-    kwargs: Any,
+    args: Args,
+    kwargs: Kwargs,
     attributes: types.Attributes,
     use_args: bool,
     these_args: Optional[List[str]],
@@ -72,52 +78,59 @@ def _attributes_to_string(attributes: types.Attributes) -> str:
 
 
 def spanned(
-    span_name: Optional[str] = None,
+    name: Optional[str] = None,
     attributes: types.Attributes = None,
     use_args: bool = False,
     these_args: Optional[List[str]] = None,
+    inject: bool = False,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
     Wraps a `tracer.start_as_current_span()` context.
 
     Keyword Arguments:
-        span_name -- name of span; if not provided, use function's qualified name
+        name -- name of span; if not provided, use function's qualified name
         attributes -- a dict of attributes to add to span
         use_args -- whether to auto-add the arguments as attributes
         these_args -- a whitelist of arguments to add as attributes; if not given and `use_args` is True, then all arguments will be added
+        inject -- whether to inject the span instance into the function (as `span`).
+                  *`inject=True` won't set as current span nor automatically exit once function is done.*
     """
 
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            _span = span_name if span_name else func.__qualname__  # Ex: MyClass.method
-            _tracer = inspect.getfile(func)  # Ex: /path/to/source_file.py
+            span_name = name if name else func.__qualname__  # Ex: MyClass.method
+            tracer_name = inspect.getfile(func)  # Ex: /path/to/source_file.py
             _attrs = _wrangle_attributes(
                 func, args, kwargs, attributes, use_args, these_args
             )
 
             logging.getLogger(_LOGGER_NAME).debug(
-                f"Started span `{_span}` for tracer `{_tracer}` "
+                f"Started span `{span_name}` for tracer `{tracer_name}` "
                 f"with these attributes: {_attributes_to_string(_attrs)}"
             )
 
-            tracer = trace.get_tracer(_tracer)
-            with tracer.start_as_current_span(_span, attributes=_attrs):
+            tracer = trace.get_tracer(tracer_name)
+            if inject:
+                kwargs["span"] = tracer.start_span(span_name, attributes=_attrs)
                 return func(*args, **kwargs)
+            else:
+                with tracer.start_as_current_span(span_name, attributes=_attrs):
+                    return func(*args, **kwargs)
 
         return wrapper
 
     return inner_function
 
 
-def get_current_span() -> trace.Span:
+def get_current_span() -> Span:
     """Get the current span instance."""
     return trace.get_current_span()
 
 
 def evented(
-    event_name: Optional[str] = None,
+    name: Optional[str] = None,
     attributes: types.Attributes = None,
     use_args: bool = False,
     these_args: Optional[List[str]] = None,
@@ -136,17 +149,17 @@ def evented(
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            _event = event_name if event_name else func.__qualname__  # Ex: MyObj.method
+            event_name = name if name else func.__qualname__  # Ex: MyObj.method
             _attrs = _wrangle_attributes(
                 func, args, kwargs, attributes, use_args, these_args
             )
 
             logging.getLogger(_LOGGER_NAME).debug(
-                f"Recorded event `{_event}` for span `{get_current_span().name}` "
+                f"Recorded event `{event_name}` for span `{get_current_span().name}` "
                 f"with these attributes: {_attributes_to_string(_attrs)}"
             )
 
-            get_current_span().add_event(_event, attributes=_attrs)
+            get_current_span().add_event(event_name, attributes=_attrs)
             return func(*args, **kwargs)
 
         return wrapper
@@ -154,6 +167,6 @@ def evented(
     return inner_function
 
 
-def add_event(name: str, attributes: types.Attributes) -> None:
+def add_event(name: str, attributes: types.Attributes = None) -> None:
     """Add an event to the current span."""
     get_current_span().add_event(name, attributes=attributes)

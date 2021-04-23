@@ -35,7 +35,7 @@ class Example2:
 
 
 @tracing.tools.spanned("my-span")
-def example_3_with_span_name() -> None:
+def example_3_with_name() -> None:
     """Print and log simple message."""
     msg = "Hello World!"
     print(msg)
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     Example2().example_2_instance_method()
 
     logging.warning("EXAMPLE #3")
-    example_3_with_span_name()
+    example_3_with_name()
 
     logging.warning("EXAMPLE #4")
     try:
