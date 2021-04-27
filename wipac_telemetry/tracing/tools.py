@@ -22,7 +22,7 @@ trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
 )
 
 
-_LOGGER_NAME = "wipac-telemetry"
+LOGGER = logging.getLogger("wipac-telemetry")
 
 Args = Tuple[Any, ...]
 Kwargs = Dict[str, Any]
@@ -42,16 +42,40 @@ class _FunctionInspection:
         self.args = args
         self.kwargs = kwargs
 
-    def sig_vals(self) -> Dict[str, Any]:
+    def sig_values(self) -> Dict[str, Any]:
         """Return signature-values as a `dict`."""
         return self._dict
+
+    def self_values(self) -> Dict[str, Any]:
+        """Return bound-instance's values as a `dict`."""
+        try:
+            return self.func.__self__.__dict__  # type: ignore[attr-defined, no-any-return]
+        except AttributeError:
+            LOGGER.warning(
+                "Attempted to access bound-instance values from non-method object."
+            )
+            return {}
+
+    def get_value(self, location: str) -> Any:
+        """Retrieve the value from the symbol called `location`.
+
+        Accepts signature- and `self.*`-values.
+
+        Raises:
+            KeyError -- if location is not found
+        """
+        if location.startswith("self."):
+            self_location = location.lstrip("self.")
+            return self.self_values()[self_location]
+        else:
+            return self.sig_values()[location]
 
 
 def _wrangle_attributes(
     attributes: types.Attributes,
     func_inspect: _FunctionInspection,
-    use_args: bool,
-    these_args: Optional[List[str]],
+    all_args: bool,
+    these: Optional[List[str]],
 ) -> types.Attributes:
     """Figure what attributes to use from the list and/or function."""
     raw: Dict[str, Any] = {}
@@ -70,12 +94,11 @@ def _wrangle_attributes(
             del raw[attr]
         return raw
 
-    if these_args:
-        raw.update(
-            {k: v for k, v in func_inspect.sig_vals().items() if k in these_args}
-        )
-    elif use_args:
-        raw.update(func_inspect.sig_vals())
+    if these:
+        raw.update({a: func_inspect.get_value(a) for a in these})
+
+    if all_args:
+        raw.update(func_inspect.sig_values())
 
     if attributes:
         raw.update(attributes)
@@ -92,9 +115,10 @@ def _attributes_to_string(attributes: types.Attributes) -> str:
 def spanned(
     name: Optional[str] = None,
     attributes: types.Attributes = None,
-    use_args: bool = False,
-    these_args: Optional[List[str]] = None,
+    all_args: bool = False,
+    these: Optional[List[str]] = None,
     inject: bool = False,
+    parent: str = "",
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -103,8 +127,8 @@ def spanned(
     Keyword Arguments:
         name -- name of span; if not provided, use function's qualified name
         attributes -- a dict of attributes to add to span
-        use_args -- whether to auto-add the arguments as attributes
-        these_args -- a whitelist of arguments to add as attributes; if not given and `use_args` is True, then all arguments will be added
+        all_args -- whether to auto-add all the function-arguments as attributes
+        these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
         inject -- whether to inject the span instance into the function (as `span`).
                   *`inject=True` won't set as current span nor automatically exit once function is done.*
     """
@@ -116,9 +140,9 @@ def spanned(
             tracer_name = inspect.getfile(func)  # Ex: /path/to/source_file.py
 
             func_inspect = _FunctionInspection(func, args, kwargs)
-            _attrs = _wrangle_attributes(attributes, func_inspect, use_args, these_args)
+            _attrs = _wrangle_attributes(attributes, func_inspect, all_args, these)
 
-            logging.getLogger(_LOGGER_NAME).debug(
+            LOGGER.debug(
                 f"Started span `{span_name}` for tracer `{tracer_name}` "
                 f"with these attributes: {_attributes_to_string(_attrs)}"
             )
@@ -144,8 +168,8 @@ def get_current_span() -> Span:
 def evented(
     name: Optional[str] = None,
     attributes: types.Attributes = None,
-    use_args: bool = False,
-    these_args: Optional[List[str]] = None,
+    all_args: bool = False,
+    these: Optional[List[str]] = None,
 ) -> Callable[..., Any]:
     """Decorate to trace a function as a new event.
 
@@ -154,8 +178,8 @@ def evented(
     Keyword Arguments:
         event_name -- name of event; if not provided, use function's qualified name
         attributes -- a dict of attributes to add to event
-        use_args -- whether to auto-add the arguments as attributes
-        these_args -- a whitelist of arguments to add as attributes; if not given and `use_args` is True, then all arguments will be added
+        all_args -- whether to auto-add all the function's arguments as attributes
+        these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
     """
 
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -164,9 +188,9 @@ def evented(
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
 
             func_inspect = _FunctionInspection(func, args, kwargs)
-            _attrs = _wrangle_attributes(attributes, func_inspect, use_args, these_args)
+            _attrs = _wrangle_attributes(attributes, func_inspect, all_args, these)
 
-            logging.getLogger(_LOGGER_NAME).debug(
+            LOGGER.debug(
                 f"Recorded event `{event_name}` for span `{get_current_span().name}` "
                 f"with these attributes: {_attributes_to_string(_attrs)}"
             )

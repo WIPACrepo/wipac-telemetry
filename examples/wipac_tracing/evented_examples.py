@@ -47,7 +47,7 @@ class EventExampleClass:
         """Print from this evented & spanned instance method."""
         print(beatle)
 
-    @tracing.tools.spanned(use_args=True)
+    @tracing.tools.spanned(all_args=True)
     def spanned_caller_method(self, album: str, year: int) -> None:
         """Call evented methods/functions in this method."""
         print(album)
@@ -57,7 +57,7 @@ class EventExampleClass:
         EventExampleClass.evented_fellow_static_method("Paul")
         evented_outer_function("George")
 
-        @tracing.tools.evented(these_args=["beatle", "drums"])
+        @tracing.tools.evented(these=["beatle", "drums"])
         def evented_local_function(beatle: str, song: str, drums: bool = False) -> None:
             print(beatle)
             print(song)

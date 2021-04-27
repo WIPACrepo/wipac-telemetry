@@ -72,7 +72,7 @@ class ExternalClass:
         """A method containing an distinct/unrelated span context."""
         print("inner span")
 
-        @tracing.tools.evented(use_args=True)
+        @tracing.tools.evented(all_args=True)
         def inner_event(name: str, height: int) -> None:
             print(name)
             print(height)
