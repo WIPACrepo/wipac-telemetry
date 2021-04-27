@@ -31,20 +31,30 @@ Span = trace.Span  # alias for easy importing
 OptSpan = Optional[Span]  # alias used for Span-argument injection
 
 
+class _FunctionInspection:
+    """A wrapper around a function, its signature, and its argument values."""
+
+    def __init__(self, func: Callable[..., Any], args: Args, kwargs: Kwargs):
+        self._dict = dict(zip(inspect.signature(func).parameters, args))
+        self._dict.update(copy.deepcopy(kwargs))
+
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def sig_vals(self) -> Dict[str, Any]:
+        """Return signature-values as a `dict`."""
+        return self._dict
+
+
 def _wrangle_attributes(
-    func: Callable[..., Any],
-    args: Args,
-    kwargs: Kwargs,
     attributes: types.Attributes,
+    func_inspect: _FunctionInspection,
     use_args: bool,
     these_args: Optional[List[str]],
 ) -> types.Attributes:
+    """Figure what attributes to use from the list and/or function."""
     raw: Dict[str, Any] = {}
-
-    def _signature_vals() -> Dict[str, Any]:
-        sig_vals = dict(zip(inspect.signature(func).parameters, args))
-        sig_vals.update(copy.deepcopy(kwargs))
-        return sig_vals
 
     def _convert_to_attributes() -> types.Attributes:
         legal_types = (str, bool, int, float)
@@ -61,9 +71,11 @@ def _wrangle_attributes(
         return raw
 
     if these_args:
-        raw.update({k: v for k, v in _signature_vals().items() if k in these_args})
+        raw.update(
+            {k: v for k, v in func_inspect.sig_vals().items() if k in these_args}
+        )
     elif use_args:
-        raw.update(_signature_vals())
+        raw.update(func_inspect.sig_vals())
 
     if attributes:
         raw.update(attributes)
@@ -102,9 +114,9 @@ def spanned(
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             span_name = name if name else func.__qualname__  # Ex: MyClass.method
             tracer_name = inspect.getfile(func)  # Ex: /path/to/source_file.py
-            _attrs = _wrangle_attributes(
-                func, args, kwargs, attributes, use_args, these_args
-            )
+
+            func_inspect = _FunctionInspection(func, args, kwargs)
+            _attrs = _wrangle_attributes(attributes, func_inspect, use_args, these_args)
 
             logging.getLogger(_LOGGER_NAME).debug(
                 f"Started span `{span_name}` for tracer `{tracer_name}` "
@@ -150,9 +162,9 @@ def evented(
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
-            _attrs = _wrangle_attributes(
-                func, args, kwargs, attributes, use_args, these_args
-            )
+
+            func_inspect = _FunctionInspection(func, args, kwargs)
+            _attrs = _wrangle_attributes(attributes, func_inspect, use_args, these_args)
 
             logging.getLogger(_LOGGER_NAME).debug(
                 f"Recorded event `{event_name}` for span `{get_current_span().name}` "

@@ -1,4 +1,4 @@
-"""Example script for the sapnned() decorator utilizing span-injection."""
+"""Example script for the spanned() decorator utilizing span-injection."""
 
 import logging
 import os
