@@ -32,43 +32,55 @@ OptSpan = Optional[Span]  # alias used for Span-argument injection
 
 
 class _FunctionInspection:
-    """A wrapper around a function, its signature, and its argument values."""
+    """A wrapper around a function and its introspection functionalities."""
 
     def __init__(self, func: Callable[..., Any], args: Args, kwargs: Kwargs):
-        self._dict = dict(zip(inspect.signature(func).parameters, args))
-        self._dict.update(copy.deepcopy(kwargs))
+        self._sig_values = dict(zip(inspect.signature(func).parameters, args))
+        self._sig_values.update(copy.deepcopy(kwargs))
 
         self.func = func
         self.args = args
         self.kwargs = kwargs
 
     def sig_values(self) -> Dict[str, Any]:
-        """Return signature-values as a `dict`."""
-        return self._dict
+        """Return signature's parameter values as a `dict`."""
+        return self._sig_values
 
-    def self_values(self) -> Dict[str, Any]:
-        """Return bound-instance's values as a `dict`."""
-        try:
-            return self.func.__self__.__dict__  # type: ignore[attr-defined, no-any-return]
-        except AttributeError:
-            LOGGER.warning(
-                "Attempted to access bound-instance values from non-method object."
-            )
-            return {}
-
-    def get_value(self, location: str) -> Any:
+    def get_attr(self, location: str) -> Any:
         """Retrieve the value from the symbol: `location`.
 
-        Accepts signature- and `self.*`-values.
+        Accepts (non-callable) nested-attributes from
+        signature- and `self.*`-values.
+
+        Examples:
+            foo, foo.bar.baz, self.ham
 
         Raises:
             KeyError -- if location is not found
         """
-        if location.startswith("self."):
-            self_location = location.lstrip("self.")
-            return self.self_values()[self_location]
-        else:
-            return self.sig_values()[location]
+
+        def _get_attr(location: str, universe: Dict[str, Any]) -> Any:
+            if "." in location:
+                parent, child = location.split(".", maxsplit=1)
+                return _get_attr(
+                    child,
+                    # grab all instance *and* class variables
+                    {k: getattr(universe[parent], k) for k in dir(universe[parent])},
+                )
+            return universe[location]
+
+        try:
+            if location.startswith("self"):
+                if not inspect.ismethod(self.func):
+                    msg = "Non-method object does not have bound-instance values."
+                    LOGGER.warning(msg)
+                    raise AttributeError(msg)
+                return _get_attr(location, {"self": self.func.__self__})  # type: ignore[attr-defined]
+            else:
+                return _get_attr(location, self.sig_values())
+        except KeyError as e:
+            # pylint: disable=W0707
+            raise AttributeError(f"{e} not found in '{location}'")
 
 
 def _wrangle_attributes(
@@ -95,7 +107,7 @@ def _wrangle_attributes(
         return raw
 
     if these:
-        raw.update({a: func_inspect.get_value(a) for a in these})
+        raw.update({a: func_inspect.get_attr(a) for a in these})
 
     if all_args:
         raw.update(func_inspect.sig_values())
@@ -120,7 +132,7 @@ def _find_span(func_inspect: _FunctionInspection, location: str) -> OptSpan:
         raise ValueError("Object is Not a Span")
 
     try:
-        return affirm_span(func_inspect.get_value(location))
+        return affirm_span(func_inspect.get_attr(location))
     except KeyError:
         LOGGER.error(f"Location Not Found: {location}")
         return None
@@ -167,7 +179,8 @@ def spanned(
 
     # TODO - add attributes to links
     """
-
+    # TODO - test `self.*`-variables
+    # TODO - test `links`
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -224,7 +237,7 @@ def evented(
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
         span -- the symbol-location of the span to add event to (defaults to current span)
     """
-
+    # TODO - test `span`
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
