@@ -57,7 +57,7 @@ class _FunctionInspection:
             return {}
 
     def get_value(self, location: str) -> Any:
-        """Retrieve the value from the symbol called `location`.
+        """Retrieve the value from the symbol: `location`.
 
         Accepts signature- and `self.*`-values.
 
@@ -106,10 +106,42 @@ def _wrangle_attributes(
     return _convert_to_attributes()
 
 
-def _attributes_to_string(attributes: types.Attributes) -> str:
-    if not attributes:
-        return "None"
-    return "[" + ", ".join(f"`{k}`" for k in attributes.keys()) + "]"
+def _find_span(func_inspect: _FunctionInspection, location: str) -> OptSpan:
+    """Retrieve the Span instance from the symbol: `location`.
+
+    If `location` is Falsy, return `None`.
+    """
+    if not location:
+        return None
+
+    def affirm_span(val: Any) -> Span:
+        if isinstance(val, Span):
+            return val
+        raise ValueError("Object is Not a Span")
+
+    try:
+        return affirm_span(func_inspect.get_value(location))
+    except KeyError:
+        LOGGER.error(f"Location Not Found: {location}")
+        return None
+    except ValueError:
+        LOGGER.error(f"Object Is Not a Span: {location}")
+        return None
+
+
+def _wrangle_links(
+    func_inspect: _FunctionInspection, locations: Optional[List[str]]
+) -> Optional[List[trace.Link]]:
+    if not locations:
+        return None
+
+    _links = []
+    for loc in locations:
+        span = _find_span(func_inspect, loc)
+        if span:
+            _links.append(trace.Link(span.get_span_context()))
+
+    return _links
 
 
 def spanned(
@@ -118,7 +150,7 @@ def spanned(
     all_args: bool = False,
     these: Optional[List[str]] = None,
     inject: bool = False,
-    parent: str = "",
+    links: Optional[List[str]] = None,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -131,6 +163,9 @@ def spanned(
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
         inject -- whether to inject the span instance into the function (as `span`).
                   *`inject=True` won't set as current span nor automatically exit once function is done.*
+        links -- symbols/locations of spans to link to (useful for cross-process tracing)
+
+    # TODO - add attributes to links
     """
 
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -141,18 +176,24 @@ def spanned(
 
             func_inspect = _FunctionInspection(func, args, kwargs)
             _attrs = _wrangle_attributes(attributes, func_inspect, all_args, these)
-
-            LOGGER.debug(
-                f"Started span `{span_name}` for tracer `{tracer_name}` "
-                f"with these attributes: {_attributes_to_string(_attrs)}"
-            )
+            _links = _wrangle_links(func_inspect, links)
 
             tracer = trace.get_tracer(tracer_name)
+
+            LOGGER.debug(
+                f"Started span `{span_name}` for tracer `{tracer_name}` with: "  # type: ignore[attr-defined]
+                f"attributes={list(_attrs.keys()) if _attrs else []}, "
+                f"links={[f'trace:{k.trace_id} span:{k.span_id}' for k in _links] if _links else []}"
+            )
             if inject:
-                kwargs["span"] = tracer.start_span(span_name, attributes=_attrs)
+                kwargs["span"] = tracer.start_span(
+                    span_name, attributes=_attrs, links=_links
+                )
                 return func(*args, **kwargs)
             else:
-                with tracer.start_as_current_span(span_name, attributes=_attrs):
+                with tracer.start_as_current_span(
+                    span_name, attributes=_attrs, links=_links
+                ):
                     return func(*args, **kwargs)
 
         return wrapper
@@ -170,6 +211,7 @@ def evented(
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
+    span: str = "",
 ) -> Callable[..., Any]:
     """Decorate to trace a function as a new event.
 
@@ -180,22 +222,30 @@ def evented(
         attributes -- a dict of attributes to add to event
         all_args -- whether to auto-add all the function's arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
+        span -- the symbol-location of the span to add event to (defaults to current span)
     """
 
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
-
             func_inspect = _FunctionInspection(func, args, kwargs)
             _attrs = _wrangle_attributes(attributes, func_inspect, all_args, these)
+            _span = _find_span(func_inspect, span)
 
-            LOGGER.debug(
-                f"Recorded event `{event_name}` for span `{get_current_span().name}` "
-                f"with these attributes: {_attributes_to_string(_attrs)}"
-            )
+            if _span:
+                _span.add_event(event_name, attributes=_attrs)
+                LOGGER.debug(
+                    f"Recorded event `{event_name}` for span `{_span.name}` with: "
+                    f"attributes={list(_attrs.keys()) if _attrs else []}"
+                )
+            else:
+                get_current_span().add_event(event_name, attributes=_attrs)
+                LOGGER.debug(
+                    f"Recorded event `{event_name}` for span `{get_current_span().name}` with: "
+                    f"attributes={list(_attrs.keys()) if _attrs else []}"
+                )
 
-            get_current_span().add_event(event_name, attributes=_attrs)
             return func(*args, **kwargs)
 
         return wrapper
