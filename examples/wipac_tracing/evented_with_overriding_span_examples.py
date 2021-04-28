@@ -17,8 +17,6 @@ from wipac_telemetry.tracing.tools import (  # noqa: E402 # pylint: disable=C041
     Span,
 )
 
-########################################################################################
-
 
 @tracing.tools.spanned(inject=True)
 def the_one_that_returns_a_span(span: OptSpan = None) -> Span:
@@ -34,20 +32,42 @@ def the_one_with_an_overriding_span_event(this_span: Span) -> None:
 
 
 @tracing.tools.evented()
-def the_one_that_fails() -> None:
+def the_one_with_a_plain_event() -> None:
     """Erroneously event this function without a current span context."""
-    logging.info("the_one_that_fails()")
+    logging.info("the_one_with_a_plain_event()")
 
 
-def example_1() -> None:
+########################################################################################
+
+
+def example_1_no_current_span_context() -> None:
     """Demo function-based overriding-span event."""
+    logging.info("example_1_no_other_span_context()")
+
     span = the_one_that_returns_a_span()
     the_one_with_an_overriding_span_event(span)
 
     try:
-        the_one_that_fails()
+        the_one_with_a_plain_event()
+        assert 0  # I don't want to start making tests, so this'll do for now
     except RuntimeError as e:
         assert str(e) == "There is no currently recording span context."
+
+    span.end()  # NOTE: traces aren't sent until the span is closed / raises
+
+
+########################################################################################
+
+
+@tracing.tools.spanned()
+def example_2_with_current_span_context() -> None:
+    """Demo function-based overriding-span event."""
+    logging.info("example_1_no_other_span_context()")
+
+    span = the_one_that_returns_a_span()
+    the_one_with_an_overriding_span_event(span)
+
+    the_one_with_a_plain_event()
 
     span.end()  # NOTE: traces aren't sent until the span is closed / raises
 
@@ -59,4 +79,7 @@ if __name__ == "__main__":
     coloredlogs.install(level="DEBUG")
 
     logging.warning("EXAMPLE #1")
-    example_1()
+    example_1_no_current_span_context()
+
+    logging.warning("EXAMPLE #2")
+    example_2_with_current_span_context()
