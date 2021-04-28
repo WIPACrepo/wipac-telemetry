@@ -70,14 +70,7 @@ class _FunctionInspection:
             return universe[location]
 
         try:
-            if location.startswith("self"):
-                if not inspect.ismethod(self.func):
-                    msg = "Non-method object does not have bound-instance values."
-                    LOGGER.warning(msg)
-                    raise AttributeError(msg)
-                return _get_attr(location, {"self": self.func.__self__})  # type: ignore[attr-defined]
-            else:
-                return _get_attr(location, self.sig_values())
+            return _get_attr(location, self.sig_values())
         except KeyError as e:
             # pylint: disable=W0707
             raise AttributeError(f"{e} not found in '{location}'")
@@ -179,7 +172,6 @@ def spanned(
 
     # TODO - add attributes to links
     """
-    # TODO - test `self.*`-variables
     # TODO - test `links`
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)

@@ -131,7 +131,9 @@ def example_9_attributes_explicit_and_args(  # pylint: disable=W0613,C0103,R0913
     logging.info(msg)
 
 
-@tracing.tools.spanned(attributes={"my": 1, "attributes": 2}, these=["a0", "a1", "a6"])
+@tracing.tools.spanned(
+    attributes={"my": 1, "attributes": 2}, these=["a0", "a1", "a6", "a0.msg"]
+)
 def example_10_attributes_explicit_and_whitelisted_args(  # pylint: disable=W0613,C0103,R0913
     a0: _MyObject,
     a1: str,
@@ -194,7 +196,7 @@ if __name__ == "__main__":
 
     logging.warning("EXAMPLE #7")
     example_7_attributes_from_sig_vals(
-        _MyObject("won't be an attribute"),
+        _MyObject("object won't be an attribute, but `msg`-attribute can be"),
         "arg1",
         "arg2",
         "arg3",
@@ -206,7 +208,7 @@ if __name__ == "__main__":
 
     logging.warning("EXAMPLE #8")
     example_8_attributes_only_explicit(
-        _MyObject("won't be an attribute"),
+        _MyObject("object won't be an attribute, but `msg`-attribute can be"),
         "arg1",
         "arg2",
         "arg3",
@@ -218,7 +220,7 @@ if __name__ == "__main__":
 
     logging.warning("EXAMPLE #9")
     example_9_attributes_explicit_and_args(
-        _MyObject("won't be an attribute"),
+        _MyObject("object won't be an attribute, but `msg`-attribute can be"),
         "arg1",
         "arg2",
         "arg3",
@@ -230,7 +232,7 @@ if __name__ == "__main__":
 
     logging.warning("EXAMPLE #10")
     example_10_attributes_explicit_and_whitelisted_args(
-        _MyObject("won't be an attribute"),
+        _MyObject("object won't be an attribute, but `msg`-attribute can be"),
         "arg1",
         "arg2",
         "arg3",
@@ -242,7 +244,7 @@ if __name__ == "__main__":
 
     logging.warning("EXAMPLE #11")
     example_11_no_attributes(
-        _MyObject("won't be an attribute"),
+        _MyObject("object won't be an attribute, but `msg`-attribute can be"),
         "arg1",
         "arg2",
         "arg3",
