@@ -245,6 +245,8 @@ def evented(
                     f"attributes={list(_attrs.keys()) if _attrs else []}"
                 )
             else:
+                if not get_current_span().is_recording():
+                    raise RuntimeError("There is no currently recording span context.")
                 get_current_span().add_event(event_name, attributes=_attrs)
                 LOGGER.debug(
                     f"Recorded event `{event_name}` for span `{get_current_span().name}` with: "
