@@ -6,7 +6,7 @@ import inspect
 import logging
 from collections.abc import Sequence
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
@@ -78,6 +78,32 @@ class _FunctionInspection:
             )
 
 
+def _convert_to_attributes(
+    raw: Union[Dict[str, Any], types.Attributes]
+) -> types.Attributes:
+    """Convert dict to mapping of attributes (deep copy values).
+
+    Bad values are disregarded.
+    """
+    if not raw:
+        return {}
+
+    skips = []
+    legal_types = (str, bool, int, float)
+    for attr in list(raw):
+        if isinstance(raw[attr], legal_types):
+            continue
+        # check all members are of same (legal) type
+        if isinstance(raw[attr], Sequence):
+            member_types = list(set(type(m) for m in raw[attr]))  # type: ignore[union-attr]
+            if len(member_types) == 1 and member_types[0] in legal_types:
+                continue
+        # illegal type
+        skips.append(attr)
+
+    return {k: copy.deepcopy(v) for k, v in raw.items() if k not in skips}
+
+
 def _wrangle_attributes(
     attributes: types.Attributes,
     func_inspect: _FunctionInspection,
@@ -86,20 +112,6 @@ def _wrangle_attributes(
 ) -> types.Attributes:
     """Figure what attributes to use from the list and/or function args."""
     raw: Dict[str, Any] = {}
-
-    def _convert_to_attributes() -> types.Attributes:
-        legal_types = (str, bool, int, float)
-        for attr in list(raw):
-            if isinstance(raw[attr], legal_types):
-                continue
-            # check all members are of same (legal) type
-            if isinstance(raw[attr], Sequence):
-                member_types = list(set(type(m) for m in raw[attr]))
-                if len(member_types) == 1 and member_types[0] in legal_types:
-                    continue
-            # illegal type
-            del raw[attr]
-        return raw
 
     if these:
         raw.update({a: func_inspect.get_attr(a) for a in these})
@@ -110,7 +122,7 @@ def _wrangle_attributes(
     if attributes:
         raw.update(attributes)
 
-    return _convert_to_attributes()
+    return _convert_to_attributes(raw)
 
 
 def _find_span(func_inspect: _FunctionInspection, location: str) -> Span:
@@ -132,21 +144,25 @@ def _find_span(func_inspect: _FunctionInspection, location: str) -> Span:
 
 
 def _wrangle_links(
-    func_inspect: _FunctionInspection, locations: Optional[List[str]]
+    func_inspect: _FunctionInspection, links: Optional[Dict[str, types.Attributes]],
 ) -> List[trace.Link]:
-    if not locations:
+    if not links:
         return []
 
-    _links = []
-    for loc in locations:
+    out = []
+    for location, attrs in links.items():
         try:
-            span = _find_span(func_inspect, loc)
+            span = _find_span(func_inspect, location)
         except ValueError as e:
-            LOGGER.warning(e)  # this could be a None value (aka an OptSpan)
+            LOGGER.warning(e)  # this location could be a None value (aka an OptSpan)
         else:
-            _links.append(trace.Link(span.get_span_context()))
+            out.append(
+                trace.Link(
+                    span.get_span_context(), attributes=_convert_to_attributes(attrs),
+                )
+            )
 
-    return _links
+    return out
 
 
 def spanned(
@@ -155,7 +171,7 @@ def spanned(
     all_args: bool = False,
     these: Optional[List[str]] = None,
     inject: bool = False,
-    links: Optional[List[str]] = None,
+    links: Union[None, List[str], Dict[str, types.Attributes]] = None,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -168,11 +184,13 @@ def spanned(
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
         inject -- whether to inject the span instance into the function (as `span`).
                   *`inject=True` won't set as current span nor automatically exit once function is done.*
-        links -- symbols/locations of spans to link to (useful for cross-process tracing)
+        links -- a list/dict of symbol-locations of spans to link to
+                 - useful for cross-process tracing
+                 - if the value is a dict of `Attributes`, the keys are the locations
 
-    # TODO - add attributes to links, also `is_remote`
+    Raises a `ValueError` when attempting to self-link the injected span.
     """
-
+    # TODO - what is `is_remote`?
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -184,7 +202,11 @@ def spanned(
 
             func_inspect = _FunctionInspection(func, args, kwargs)
             _attrs = _wrangle_attributes(attributes, func_inspect, all_args, these)
-            _links = _wrangle_links(func_inspect, links)
+
+            if isinstance(links, list):  # links is a list, aka has no attributes
+                _links = _wrangle_links(func_inspect, {k: {} for k in links})
+            else:
+                _links = _wrangle_links(func_inspect, links)
 
             tracer = trace.get_tracer(tracer_name)
 
@@ -231,6 +253,8 @@ def evented(
         all_args -- whether to auto-add all the function's arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
         span -- the symbol-location of the span to add event to (defaults to current span)
+
+    Raises a `RuntimeError` if no current span is recording.
     """
 
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
