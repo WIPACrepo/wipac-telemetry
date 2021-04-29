@@ -75,6 +75,36 @@ def example_2_with_current_span_context() -> None:
 ########################################################################################
 
 
+class TheOneWithAnInstanceAttributeSpan:
+    """A class with a span."""
+
+    def __init__(self, span: Span) -> None:
+        self.span = span
+        self.id = 54641234724
+
+
+@tracing.tools.evented(span="inst.span", these=["inst.id"])
+def the_one_with_an_overriding_span_event_nested_in_an_instance(
+    inst: TheOneWithAnInstanceAttributeSpan,
+) -> None:
+    """Use an overriding-span to event this function via an instance."""
+    logging.info("the_one_with_an_overriding_span_event_nested_in_an_instance()")
+
+
+@tracing.tools.spanned()
+def example_3_instance_attribute_overrding_span() -> None:
+    """Demo function-based overriding-span event."""
+    logging.info("example_3_instance_attribute_overrding_span()")
+
+    span = the_one_that_returns_a_span()
+    inst = TheOneWithAnInstanceAttributeSpan(span)
+    the_one_with_an_overriding_span_event_nested_in_an_instance(inst)
+    span.end()  # NOTE: traces aren't sent until the span is closed / raises
+
+
+########################################################################################
+
+
 if __name__ == "__main__":
     coloredlogs.install(level="DEBUG")
 
@@ -83,3 +113,6 @@ if __name__ == "__main__":
 
     logging.warning("EXAMPLE #2")
     example_2_with_current_span_context()
+
+    logging.warning("EXAMPLE #3")
+    example_3_instance_attribute_overrding_span()
