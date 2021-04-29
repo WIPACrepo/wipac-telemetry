@@ -141,7 +141,7 @@ def _wrangle_links(
         try:
             span = _find_span(func_inspect, loc)
         except ValueError as e:
-            LOGGER.error(e)  # this could be a None value (aka an OptSpan)
+            LOGGER.warning(e)  # this could be a None value (aka an OptSpan)
         else:
             _links.append(trace.Link(span.get_span_context()))
 

@@ -58,14 +58,24 @@ class Client:
         self.server = server
 
     @tracing.tools.spanned(inject=True, these=["urgent"])
-    def send(
+    def send_1_with_injection(
         self, message: str, span: OptSpan = None, urgent: bool = False, delay: int = 0
     ) -> None:
         """Send request to server."""
         span = cast(Span, span)
         time.sleep(delay)
         self.server.incoming(Request(message, span, urgent))
-        span.end()
+        span.end()  # NOTE: traces aren't sent until the span is closed / raises
+
+    @tracing.tools.spanned(these=["urgent"])
+    def send_2_without_injection(
+        self, message: str, urgent: bool = False, delay: int = 0
+    ) -> None:
+        """Send request to server."""
+        # span = cast(Span, span)
+        time.sleep(delay)
+        self.server.incoming(Request(message, tracing.tools.get_current_span(), urgent))
+        # span.end() -- no need, b/c not injecting -> span ends when function returns
 
 
 def example_1() -> None:
@@ -75,7 +85,8 @@ def example_1() -> None:
     """
     server = Server()
     client = Client(server)
-    client.send("Hello World!", delay=1)
+    client.send_1_with_injection("Hello World!", delay=1)
+    client.send_2_without_injection("Hello Mars!", delay=1)
 
 
 if __name__ == "__main__":
