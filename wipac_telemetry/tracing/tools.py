@@ -116,10 +116,11 @@ def _wrangle_attributes(
 def _find_span(func_inspect: _FunctionInspection, location: str) -> Span:
     """Retrieve the Span instance from the symbol: `location`.
 
-    If `location` is Falsy, return `None`.
+    Raises a `ValueError` if `location` is Falsy or its found object is
+    not a Span.
     """
     if not location:
-        return None
+        raise ValueError("`location` is Falsy")
 
     def affirm_span(val: Any) -> Span:
         if isinstance(val, Span):
@@ -132,9 +133,9 @@ def _find_span(func_inspect: _FunctionInspection, location: str) -> Span:
 
 def _wrangle_links(
     func_inspect: _FunctionInspection, locations: Optional[List[str]]
-) -> Optional[List[trace.Link]]:
+) -> List[trace.Link]:
     if not locations:
-        return None
+        return []
 
     _links = []
     for loc in locations:
@@ -190,7 +191,7 @@ def spanned(
             LOGGER.debug(
                 f"Started span `{span_name}` for tracer `{tracer_name}` with: "
                 f"attributes={list(_attrs.keys()) if _attrs else []}, "
-                f"links={[k.context for k in _links] if _links else []}"
+                f"links={[k.context for k in _links]}"
             )
             if inject:
                 kwargs["span"] = tracer.start_span(
@@ -238,12 +239,12 @@ def evented(
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
             func_inspect = _FunctionInspection(func, args, kwargs)
             _attrs = _wrangle_attributes(attributes, func_inspect, all_args, these)
-            _span = _find_span(func_inspect, span)
 
-            if _span:
-                _span.add_event(event_name, attributes=_attrs)
+            if span:
+                override_span = _find_span(func_inspect, span)
+                override_span.add_event(event_name, attributes=_attrs)
                 LOGGER.debug(
-                    f"Recorded event `{event_name}` for span `{_span.name}` with: "  # type: ignore[attr-defined]
+                    f"Recorded event `{event_name}` for span `{override_span.name}` with: "  # type: ignore[attr-defined]
                     f"attributes={list(_attrs.keys()) if _attrs else []}"
                 )
             else:
