@@ -27,6 +27,7 @@ class Request:
     def __init__(self, message: str, span: Span, urgent: bool) -> None:
         self.message = message
         self.span = span
+        self.span2: OptSpan = None
         self.id = random.randint(0, 90000)
         self.urgent = urgent
 
@@ -38,7 +39,7 @@ class Server:
         pass
 
     @tracing.tools.spanned(
-        links=["request.span"],
+        links=["request.span", "request.span2"],  # span2 will be ignored if `None`
         these=["request.message", "request.id", "request.urgent"],
     )
     def incoming(self, request: Request) -> None:

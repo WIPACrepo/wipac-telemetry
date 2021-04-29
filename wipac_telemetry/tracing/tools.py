@@ -113,7 +113,7 @@ def _wrangle_attributes(
     return _convert_to_attributes()
 
 
-def _find_span(func_inspect: _FunctionInspection, location: str) -> OptSpan:
+def _find_span(func_inspect: _FunctionInspection, location: str) -> Span:
     """Retrieve the Span instance from the symbol: `location`.
 
     If `location` is Falsy, return `None`.
@@ -124,15 +124,10 @@ def _find_span(func_inspect: _FunctionInspection, location: str) -> OptSpan:
     def affirm_span(val: Any) -> Span:
         if isinstance(val, Span):
             return val
-        raise ValueError("Object is Not a Span")
+        raise ValueError(f"Object is Not a Span: {location}")
 
     attr = func_inspect.get_attr(location)
-
-    try:
-        return affirm_span(attr)
-    except ValueError:
-        LOGGER.error(f"Object Is Not a Span: {location}")
-        return None
+    return affirm_span(attr)
 
 
 def _wrangle_links(
@@ -143,8 +138,11 @@ def _wrangle_links(
 
     _links = []
     for loc in locations:
-        span = _find_span(func_inspect, loc)
-        if span:
+        try:
+            span = _find_span(func_inspect, loc)
+        except ValueError as e:
+            LOGGER.error(e)  # this could be a None value (aka an OptSpan)
+        else:
             _links.append(trace.Link(span.get_span_context()))
 
     return _links
