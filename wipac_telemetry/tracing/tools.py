@@ -170,9 +170,9 @@ def spanned(
                   *`inject=True` won't set as current span nor automatically exit once function is done.*
         links -- symbols/locations of spans to link to (useful for cross-process tracing)
 
-    # TODO - add attributes to links
+    # TODO - add attributes to links, also `is_remote`
     """
-    # TODO - test `links`
+
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -186,9 +186,9 @@ def spanned(
             tracer = trace.get_tracer(tracer_name)
 
             LOGGER.debug(
-                f"Started span `{span_name}` for tracer `{tracer_name}` with: "  # type: ignore[attr-defined]
+                f"Started span `{span_name}` for tracer `{tracer_name}` with: "
                 f"attributes={list(_attrs.keys()) if _attrs else []}, "
-                f"links={[f'trace:{k.trace_id} span:{k.span_id}' for k in _links] if _links else []}"
+                f"links={[k.context for k in _links] if _links else []}"
             )
             if inject:
                 kwargs["span"] = tracer.start_span(
@@ -229,7 +229,7 @@ def evented(
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
         span -- the symbol-location of the span to add event to (defaults to current span)
     """
-    # TODO - test `span`
+
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -241,7 +241,7 @@ def evented(
             if _span:
                 _span.add_event(event_name, attributes=_attrs)
                 LOGGER.debug(
-                    f"Recorded event `{event_name}` for span `{_span.name}` with: "
+                    f"Recorded event `{event_name}` for span `{_span.name}` with: "  # type: ignore[attr-defined]
                     f"attributes={list(_attrs.keys()) if _attrs else []}"
                 )
             else:
@@ -249,7 +249,7 @@ def evented(
                     raise RuntimeError("There is no currently recording span context.")
                 get_current_span().add_event(event_name, attributes=_attrs)
                 LOGGER.debug(
-                    f"Recorded event `{event_name}` for span `{get_current_span().name}` with: "
+                    f"Recorded event `{event_name}` for span `{get_current_span().name}` with: "  # type: ignore[attr-defined]
                     f"attributes={list(_attrs.keys()) if _attrs else []}"
                 )
 
