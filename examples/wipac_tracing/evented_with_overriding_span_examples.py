@@ -81,6 +81,13 @@ class TheOneWithAnInstanceAttributeSpan:
     def __init__(self, span: Span) -> None:
         self.span = span
         self.id = 54641234724
+        self.calls = 0
+
+    @tracing.tools.evented(span="self.span", these=["self.calls"])
+    def yet_another_event(self) -> None:
+        """Use a self.*-overriding span."""
+        logging.info("yet_another_event()")
+        self.calls += 300
 
 
 @tracing.tools.evented(span="inst.span", these=["inst.id"])
@@ -89,6 +96,7 @@ def the_one_with_an_overriding_span_event_nested_in_an_instance(
 ) -> None:
     """Use an overriding-span to event this function via an instance."""
     logging.info("the_one_with_an_overriding_span_event_nested_in_an_instance()")
+    inst.calls += 150
 
 
 @tracing.tools.spanned()
@@ -99,6 +107,7 @@ def example_3_instance_attribute_overrding_span() -> None:
     span = the_one_that_returns_a_span()
     inst = TheOneWithAnInstanceAttributeSpan(span)
     the_one_with_an_overriding_span_event_nested_in_an_instance(inst)
+    inst.yet_another_event()
     span.end()  # NOTE: traces aren't sent until the span is closed / raises
 
 
