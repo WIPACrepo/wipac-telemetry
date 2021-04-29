@@ -24,10 +24,11 @@ from wipac_telemetry.tracing.tools import (  # noqa: E402 # pylint: disable=C041
 class Request:
     """An example request object."""
 
-    def __init__(self, message: str, span: Span) -> None:
+    def __init__(self, message: str, span: Span, urgent: bool) -> None:
         self.message = message
         self.span = span
         self.id = random.randint(0, 90000)
+        self.urgent = urgent
 
 
 class Server:
@@ -37,14 +38,15 @@ class Server:
         pass
 
     @tracing.tools.spanned(
-        links=["request.span"], these=["request.message", "request.id"]
+        links=["request.span"],
+        these=["request.message", "request.id", "request.urgent"],
     )
     def incoming(self, request: Request) -> None:
         """Handle an incoming message."""
         print(request.message)
         for i in reversed(range(4)):
             print(f"{i+1}...")
-            time.sleep(1)
+            time.sleep(0.5)
         print("Done")
 
 
@@ -54,11 +56,14 @@ class Client:
     def __init__(self, server: Server) -> None:
         self.server = server
 
-    @tracing.tools.spanned(inject=True)
-    def send(self, message: str, span: OptSpan = None) -> None:
+    @tracing.tools.spanned(inject=True, these=["urgent"])
+    def send(
+        self, message: str, span: OptSpan = None, urgent: bool = False, delay: int = 0
+    ) -> None:
         """Send request to server."""
         span = cast(Span, span)
-        self.server.incoming(Request(message, span))
+        time.sleep(delay)
+        self.server.incoming(Request(message, span, urgent))
         span.end()
 
 
@@ -69,7 +74,7 @@ def example_1() -> None:
     """
     server = Server()
     client = Client(server)
-    client.send("Hello World!")
+    client.send("Hello World!", delay=1)
 
 
 if __name__ == "__main__":

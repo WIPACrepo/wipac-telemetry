@@ -35,28 +35,27 @@ class _FunctionInspection:
     """A wrapper around a function and its introspection functionalities."""
 
     def __init__(self, func: Callable[..., Any], args: Args, kwargs: Kwargs):
-        self._sig_values = dict(zip(inspect.signature(func).parameters, args))
-        self._sig_values.update(copy.deepcopy(kwargs))
+        bound_args = inspect.signature(func).bind(*args, **kwargs)
+        bound_args.apply_defaults()
+        self.param_args = dict(bound_args.arguments)
 
         self.func = func
         self.args = args
         self.kwargs = kwargs
 
-    def sig_values(self) -> Dict[str, Any]:
-        """Return signature's parameter values as a `dict`."""
-        return self._sig_values
-
     def get_attr(self, location: str) -> Any:
-        """Retrieve the value from the symbol: `location`.
+        """Retrieve the value at `location` from signature-parameter args.
 
-        Accepts (non-callable) nested-attributes from
-        signature- and `self.*`-values.
+        Searches:
+            - non-callable objects
+            - supports nested/chained attributes (including `self.*` attributes)
 
         Examples:
-            foo, foo.bar.baz, self.ham
+            signature -> (self, foo)
+            locations -> self.green, foo, foo.bar.baz
 
         Raises:
-            KeyError -- if location is not found
+            AttributeError -- if location is not found
         """
 
         def _get_attr(location: str, universe: Dict[str, Any]) -> Any:
@@ -70,10 +69,13 @@ class _FunctionInspection:
             return universe[location]
 
         try:
-            return _get_attr(location, self.sig_values())
+            return _get_attr(location, self.param_args)
         except KeyError as e:
             # pylint: disable=W0707
-            raise AttributeError(f"{e} not found in '{location}'")
+            raise AttributeError(
+                f"{e} not found in '{location}' "
+                f"(present parameter arguments: {', '.join(self.param_args.keys())})"
+            )
 
 
 def _wrangle_attributes(
@@ -82,7 +84,7 @@ def _wrangle_attributes(
     all_args: bool,
     these: Optional[List[str]],
 ) -> types.Attributes:
-    """Figure what attributes to use from the list and/or function."""
+    """Figure what attributes to use from the list and/or function args."""
     raw: Dict[str, Any] = {}
 
     def _convert_to_attributes() -> types.Attributes:
@@ -103,7 +105,7 @@ def _wrangle_attributes(
         raw.update({a: func_inspect.get_attr(a) for a in these})
 
     if all_args:
-        raw.update(func_inspect.sig_values())
+        raw.update(func_inspect.param_args)
 
     if attributes:
         raw.update(attributes)
@@ -124,11 +126,10 @@ def _find_span(func_inspect: _FunctionInspection, location: str) -> OptSpan:
             return val
         raise ValueError("Object is Not a Span")
 
+    attr = func_inspect.get_attr(location)
+
     try:
-        return affirm_span(func_inspect.get_attr(location))
-    except KeyError:
-        LOGGER.error(f"Location Not Found: {location}")
-        return None
+        return affirm_span(attr)
     except ValueError:
         LOGGER.error(f"Object Is Not a Span: {location}")
         return None
@@ -178,6 +179,9 @@ def spanned(
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             span_name = name if name else func.__qualname__  # Ex: MyClass.method
             tracer_name = inspect.getfile(func)  # Ex: /path/to/source_file.py
+
+            if inject and links and "span" in links:
+                raise ValueError("Cannot self-link the injected span: `span`")
 
             func_inspect = _FunctionInspection(func, args, kwargs)
             _attrs = _wrangle_attributes(attributes, func_inspect, all_args, these)
