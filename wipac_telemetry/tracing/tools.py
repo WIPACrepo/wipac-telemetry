@@ -29,6 +29,7 @@ Kwargs = Dict[str, Any]
 
 Span = trace.Span  # alias for easy importing
 OptSpan = Optional[Span]  # alias used for Span-argument injection
+Link = trace.Link
 
 
 class _FunctionInspection:
@@ -43,8 +44,12 @@ class _FunctionInspection:
         self.args = args
         self.kwargs = kwargs
 
-    def get_attr(self, location: str) -> Any:
-        """Retrieve the value at `location` from signature-parameter args.
+    def rget(
+        self, var_name: str, typ: Union[None, type, Tuple[type, ...]] = None
+    ) -> Any:
+        """Retrieve the instance at `var_name` from signature-parameter args.
+
+        Optionally, check if the value is of type(s), `type`.
 
         Searches:
             - non-callable objects
@@ -52,30 +57,46 @@ class _FunctionInspection:
 
         Examples:
             signature -> (self, foo)
-            locations -> self.green, foo, foo.bar.baz
+            variable names -> self.green, foo, foo.bar.baz
 
         Raises:
-            AttributeError -- if location is not found
+            AttributeError -- if var_name is not found
+            TypeError -- if the instance is found, but isn't of the type(s) indicated
         """
 
-        def _get_attr(location: str, universe: Dict[str, Any]) -> Any:
-            if "." in location:
-                parent, child = location.split(".", maxsplit=1)
-                return _get_attr(
-                    child,
-                    # grab all instance *and* class variables
-                    {k: getattr(universe[parent], k) for k in dir(universe[parent])},
-                )
-            return universe[location]
+        def dot_left(string: str) -> str:
+            return string.split(".", maxsplit=1)[0]
+
+        def dot_right(string: str) -> str:
+            try:
+                return string.split(".", maxsplit=1)[1]
+            except IndexError:
+                return ""
+
+        def _rget(obj: Any, attr: str) -> Any:
+            if not attr:
+                return obj
+            elif "." in attr:
+                return _rget(getattr(obj, dot_left(attr)), dot_right(attr))
+            else:
+                return getattr(obj, attr)
 
         try:
-            return _get_attr(location, self.param_args)
-        except KeyError as e:
-            # pylint: disable=W0707
-            raise AttributeError(
-                f"{e} not found in '{location}' "
+            obj = _rget(self.param_args[dot_left(var_name)], dot_right(var_name))
+        except AttributeError as e:
+            raise AttributeError(  # pylint: disable=W0707
+                f"'{var_name}': {e} "
                 f"(present parameter arguments: {', '.join(self.param_args.keys())})"
             )
+        except KeyError:
+            raise AttributeError(  # pylint: disable=W0707
+                f"'{var_name}': function parameters have no argument '{dot_left(var_name)}' "
+                f"(present parameter arguments: {', '.join(self.param_args.keys())})"
+            )
+
+        if typ and not isinstance(obj, typ):
+            raise TypeError(f"Instance '{var_name}' is not {typ}")
+        return obj
 
 
 def _convert_to_attributes(
@@ -114,7 +135,7 @@ def _wrangle_attributes(
     raw: Dict[str, Any] = {}
 
     if these:
-        raw.update({a: func_inspect.get_attr(a) for a in these})
+        raw.update({a: func_inspect.rget(a) for a in these})
 
     if all_args:
         raw.update(func_inspect.param_args)
@@ -125,42 +146,20 @@ def _wrangle_attributes(
     return _convert_to_attributes(raw)
 
 
-def _find_span(func_inspect: _FunctionInspection, location: str) -> Span:
-    """Retrieve the Span instance from the symbol: `location`.
-
-    Raises a `ValueError` if `location` is Falsy or its found object is
-    not a Span.
-    """
-    if not location:
-        raise ValueError("`location` is Falsy")
-
-    def affirm_span(val: Any) -> Span:
-        if isinstance(val, Span):
-            return val
-        raise ValueError(f"Object is Not a Span: {location}")
-
-    attr = func_inspect.get_attr(location)
-    return affirm_span(attr)
-
-
 def _wrangle_links(
-    func_inspect: _FunctionInspection, links: Optional[Dict[str, types.Attributes]],
-) -> List[trace.Link]:
+    func_inspect: _FunctionInspection, links: Optional[List[str]],
+) -> List[Link]:
     if not links:
         return []
 
     out = []
-    for location, attrs in links.items():
+    for var_name in links:
         try:
-            span = _find_span(func_inspect, location)
-        except ValueError as e:
-            LOGGER.warning(e)  # this location could be a None value (aka an OptSpan)
+            link = func_inspect.rget(var_name, Link)
+        except TypeError as e:
+            LOGGER.warning(e)  # this var_name could be a None value (aka an OptSpan)
         else:
-            out.append(
-                trace.Link(
-                    span.get_span_context(), attributes=_convert_to_attributes(attrs),
-                )
-            )
+            out.append(link)
 
     return out
 
@@ -171,7 +170,7 @@ def spanned(
     all_args: bool = False,
     these: Optional[List[str]] = None,
     inject: bool = False,
-    links: Union[None, List[str], Dict[str, types.Attributes]] = None,
+    links: Optional[List[str]] = None,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -184,9 +183,7 @@ def spanned(
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
         inject -- whether to inject the span instance into the function (as `span`).
                   *`inject=True` won't set as current span nor automatically exit once function is done.*
-        links -- a list/dict of symbol-locations of spans to link to
-                 - useful for cross-process tracing
-                 - if the value is a dict of `Attributes`, the keys are the locations
+        links -- a list of variable names of `Link` instances (span-links) - useful for cross-process tracing
 
     Raises a `ValueError` when attempting to self-link the injected span.
     """
@@ -202,11 +199,7 @@ def spanned(
 
             func_inspect = _FunctionInspection(func, args, kwargs)
             _attrs = _wrangle_attributes(attributes, func_inspect, all_args, these)
-
-            if isinstance(links, list):  # links is a list, aka has no attributes
-                _links = _wrangle_links(func_inspect, {k: {} for k in links})
-            else:
-                _links = _wrangle_links(func_inspect, links)
+            _links = _wrangle_links(func_inspect, links)
 
             tracer = trace.get_tracer(tracer_name)
 
@@ -252,7 +245,7 @@ def evented(
         attributes -- a dict of attributes to add to event
         all_args -- whether to auto-add all the function's arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
-        span -- the symbol-location of the span to add event to (defaults to current span)
+        span -- the variable name of the span instance to add event to (defaults to current span)
 
     Raises a `RuntimeError` if no current span is recording.
     """
@@ -265,10 +258,10 @@ def evented(
             _attrs = _wrangle_attributes(attributes, func_inspect, all_args, these)
 
             if span:
-                override_span = _find_span(func_inspect, span)
+                override_span = func_inspect.rget(span, Span)
                 override_span.add_event(event_name, attributes=_attrs)
                 LOGGER.debug(
-                    f"Recorded event `{event_name}` for span `{override_span.name}` with: "  # type: ignore[attr-defined]
+                    f"Recorded event `{event_name}` for span `{override_span.name}` with: "
                     f"attributes={list(_attrs.keys()) if _attrs else []}"
                 )
             else:
@@ -290,3 +283,8 @@ def evented(
 def add_event(name: str, attributes: types.Attributes = None) -> None:
     """Add an event to the current span."""
     get_current_span().add_event(name, attributes=attributes)
+
+
+def make_link(span: Span, attributes: types.Attributes = None) -> Link:
+    """Make a Link for a Span (context) with a collection of attributes."""
+    return Link(span.get_span_context(), attributes=_convert_to_attributes(attributes))

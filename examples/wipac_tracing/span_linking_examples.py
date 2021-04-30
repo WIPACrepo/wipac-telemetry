@@ -6,7 +6,7 @@ import os
 import random
 import sys
 import time
-from typing import cast
+from typing import Optional, cast
 
 import coloredlogs  # type: ignore[import]
 
@@ -16,8 +16,10 @@ if not os.getcwd().endswith("/wipac-telemetry-prototype"):
 sys.path.append(".")
 from wipac_telemetry import tracing  # noqa: E402 # pylint: disable=C0413,E0401
 from wipac_telemetry.tracing.tools import (  # noqa: E402 # pylint: disable=C0413
+    Link,
     OptSpan,
     Span,
+    make_link,
 )
 
 
@@ -26,8 +28,10 @@ class Request:
 
     def __init__(self, message: str, span: Span, urgent: bool) -> None:
         self.message = message
-        self.span = span
-        self.span2: OptSpan = None
+        self.span_link: Link = make_link(
+            span, {"link-type": "message", "message-class": "Request"}
+        )
+        self.span_link_2: Optional[Link] = None
         self.id = random.randint(0, 90000)
         self.urgent = urgent
 
@@ -39,7 +43,10 @@ class Server:
         pass
 
     @tracing.tools.spanned(
-        links=["request.span", "request.span2"],  # span2 will be ignored if `None`
+        links=[
+            "request.span_link",
+            "request.span_link_2",
+        ],  # span_link_2 will be ignored if `None`
         these=["request.message", "request.id", "request.urgent"],
     )
     def incoming(self, request: Request) -> None:
