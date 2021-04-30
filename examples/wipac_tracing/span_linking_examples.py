@@ -29,7 +29,7 @@ class Request:
     def __init__(self, message: str, span: Span, urgent: bool) -> None:
         self.message = message
         self.span_link: Link = make_link(
-            span, {"link-type": "message", "message-class": "Request"}
+            span, "Request", {"type": "message", "urgent": urgent}
         )
         self.span_link_2: Optional[Link] = None
         self.id = random.randint(0, 90000)

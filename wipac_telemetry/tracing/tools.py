@@ -285,6 +285,11 @@ def add_event(name: str, attributes: types.Attributes = None) -> None:
     get_current_span().add_event(name, attributes=attributes)
 
 
-def make_link(span: Span, attributes: types.Attributes = None) -> Link:
+def make_link(
+    span: Span, purpose: str, other_attributes: types.Attributes = None
+) -> Link:
     """Make a Link for a Span (context) with a collection of attributes."""
-    return Link(span.get_span_context(), attributes=_convert_to_attributes(attributes))
+    attrs = dict(other_attributes) if other_attributes else {}
+    attrs["purpose"] = purpose
+
+    return Link(span.get_span_context(), attributes=_convert_to_attributes(attrs))
