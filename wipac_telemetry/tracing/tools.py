@@ -9,27 +9,49 @@ from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from opentelemetry import trace
+from opentelemetry.exporter.jaeger.thrift import JaegerExporter  # type: ignore[import]
 from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
 from opentelemetry.sdk.trace.export import (  # type: ignore[import]
+    BatchSpanProcessor,
     ConsoleSpanExporter,
     SimpleSpanProcessor,
 )
 from opentelemetry.util import types
 
+# Config SDK ###########################################################################
+
 trace.set_tracer_provider(TracerProvider())
+
 trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
+    # output to stdout
     SimpleSpanProcessor(ConsoleSpanExporter())
+)
+trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
+    # relies on env variables
+    # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/jaeger/jaeger.html
+    BatchSpanProcessor(JaegerExporter())
 )
 
 
+# Constants ############################################################################
+
 LOGGER = logging.getLogger("wipac-telemetry")
+
+
+# Types ################################################################################
 
 Args = Tuple[Any, ...]
 Kwargs = Dict[str, Any]
 
+
+# Aliases ##############################################################################
+
 Span = trace.Span  # alias for easy importing
 OptSpan = Optional[Span]  # alias used for Span-argument injection
 Link = trace.Link
+
+
+# API-Wrappers #########################################################################
 
 
 class _FunctionInspection:
