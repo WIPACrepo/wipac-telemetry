@@ -9,7 +9,9 @@ from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from opentelemetry import trace
-from opentelemetry.exporter.jaeger.thrift import JaegerExporter  # type: ignore[import]
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import]
+    OTLPSpanExporter,
+)
 from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
 from opentelemetry.sdk.trace.export import (  # type: ignore[import]
     BatchSpanProcessor,
@@ -28,8 +30,8 @@ trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
 )
 trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
     # relies on env variables
-    # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/jaeger/jaeger.html
-    BatchSpanProcessor(JaegerExporter())
+    # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
+    BatchSpanProcessor(OTLPSpanExporter())
 )
 
 
