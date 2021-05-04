@@ -14,8 +14,8 @@ if not os.getcwd().endswith("/wipac-telemetry-prototype"):
     raise RuntimeError("Script needs to be ran from root of repository.")
 
 sys.path.append(".")
-from wipac_telemetry import tracing  # noqa: E402 # pylint: disable=C0413,E0401
-from wipac_telemetry.tracing.tools import (  # noqa: E402 # pylint: disable=C0413
+from wipac_telemetry import tracing_tools  # noqa: E402 # pylint: disable=C0413,E0401
+from wipac_telemetry.tracing_tools import (  # noqa: E402 # pylint: disable=C0413
     Link,
     OptSpan,
     Span,
@@ -42,7 +42,7 @@ class Server:
     def __init__(self) -> None:
         pass
 
-    @tracing.tools.spanned(
+    @tracing_tools.spanned(
         links=[
             "request.span_link",
             "request.span_link_2",
@@ -64,7 +64,7 @@ class Client:
     def __init__(self, server: Server) -> None:
         self.server = server
 
-    @tracing.tools.spanned(inject=True, these=["urgent"])
+    @tracing_tools.spanned(inject=True, these=["urgent"])
     def send_1_with_injection(
         self, message: str, span: OptSpan = None, urgent: bool = False, delay: int = 0
     ) -> None:
@@ -74,14 +74,14 @@ class Client:
         self.server.incoming(Request(message, span, urgent))
         span.end()  # NOTE: traces aren't sent until the span is closed / raises
 
-    @tracing.tools.spanned(these=["urgent"])
+    @tracing_tools.spanned(these=["urgent"])
     def send_2_without_injection(
         self, message: str, urgent: bool = False, delay: int = 0
     ) -> None:
         """Send request to server."""
         # span = cast(Span, span)
         time.sleep(delay)
-        self.server.incoming(Request(message, tracing.tools.get_current_span(), urgent))
+        self.server.incoming(Request(message, tracing_tools.get_current_span(), urgent))
         # span.end() -- no need, b/c not injecting -> span ends when function returns
 
 

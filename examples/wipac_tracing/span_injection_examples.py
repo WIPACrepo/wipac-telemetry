@@ -11,7 +11,7 @@ if not os.getcwd().endswith("/wipac-telemetry-prototype"):
     raise RuntimeError("Script needs to be ran from root of repository.")
 
 sys.path.append(".")
-from wipac_telemetry import tracing  # noqa: E402 # pylint: disable=C0413,E0401
+from wipac_telemetry import tracing_tools  # noqa: E402 # pylint: disable=C0413,E0401
 
 ########################################################################################
 
@@ -27,16 +27,16 @@ class DemoPitfallsClass:
     ##################
 
     # NOT OKAY
-    @tracing.tools.spanned(inject=True)
-    def invalid_start_span(self, span: tracing.tools.OptSpan = None) -> None:
+    @tracing_tools.spanned(inject=True)
+    def invalid_start_span(self, span: tracing_tools.OptSpan = None) -> None:
         """ERROR: making an instance-originated span is not supported, will break if called."""
         self.span = span
 
     # USE THIS INSTEAD
     @staticmethod
-    @tracing.tools.spanned(inject=True)
+    @tracing_tools.spanned(inject=True)
     def static_start_span(
-        inst: "DemoPitfallsClass", span: tracing.tools.OptSpan = None
+        inst: "DemoPitfallsClass", span: tracing_tools.OptSpan = None
     ) -> None:
         """Inject span then pass into instance."""
         inst.span = span
@@ -64,15 +64,15 @@ class DemoPitfallsClass:
 class ExternalClass:
     """Handle methods using a Span instance as a instance variable."""
 
-    def __init__(self, span: tracing.tools.Span) -> None:
+    def __init__(self, span: tracing_tools.Span) -> None:
         self.span = span
 
-    @tracing.tools.spanned()
+    @tracing_tools.spanned()
     def independent_inner_span(self):
         """A method containing an distinct/unrelated span context."""
         print("inner span")
 
-        @tracing.tools.evented(all_args=True)
+        @tracing_tools.evented(all_args=True)
         def inner_event(name: str, height: int) -> None:
             print(name)
             print(height)
@@ -87,8 +87,8 @@ class ExternalClass:
     #         self.span.end()
 
 
-@tracing.tools.spanned(inject=True, attributes={"a": 1})
-def injected_span_pass_to_instance(span: tracing.tools.OptSpan = None) -> ExternalClass:
+@tracing_tools.spanned(inject=True, attributes={"a": 1})
+def injected_span_pass_to_instance(span: tracing_tools.OptSpan = None) -> ExternalClass:
     """Inject a span then pass onto an instance."""
     if not span:
         raise Exception("Span injection failed.")

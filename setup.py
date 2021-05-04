@@ -104,7 +104,7 @@ setup(
         + ["License :: OSI Approved :: MIT License"]
     ),
     keywords="wipac telemetry opentelemetry",
-    packages=["wipac_telemetry", "wipac_telemetry.tracing"],
+    packages=["wipac_telemetry", "wipac_telemetry.tracing_tools"],
     install_requires=_get_pypi_requirements(),
     dependency_links=_get_git_requirements(),
     package_data={PACKAGE_NAME: ["py.typed"]},
