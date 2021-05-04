@@ -12,8 +12,8 @@ from opentelemetry.sdk.trace.export import (  # type: ignore[import]
     SimpleSpanProcessor,
 )
 
+from . import propagations  # noqa
 from .events import evented  # noqa
-from .propagations import inject  # noqa
 from .spans import make_link, spanned  # noqa
 from .utils import Link, OptSpan, Span, get_current_span  # noqa
 
