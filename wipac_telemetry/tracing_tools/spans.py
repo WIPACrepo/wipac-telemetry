@@ -1,6 +1,7 @@
 """Tools for working with spans."""
 
 
+import asyncio
 import inspect
 from functools import wraps
 from typing import Any, Callable, List, Optional
@@ -11,7 +12,9 @@ from opentelemetry.util import types
 
 from .utils import (
     LOGGER,
+    Args,
     FunctionInspection,
+    Kwargs,
     Link,
     Span,
     convert_to_attributes,
@@ -47,8 +50,7 @@ def spanned(
     """
     # TODO - what is `is_remote`?
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def setup(args: Args, kwargs: Kwargs):
             span_name = name if name else func.__qualname__  # Ex: MyClass.method
             tracer_name = inspect.getfile(func)  # Ex: /path/to/source_file.py
 
@@ -74,26 +76,44 @@ def spanned(
                 f"attributes={list(_attrs.keys()) if _attrs else []}, "
                 f"links={[k.context for k in _links]}"
             )
+
+            return (
+                tracer,
+                span_name,
+                {
+                    "context": context,
+                    "kind": kind,
+                    "attributes": _attrs,
+                    "links": _links,
+                },
+            )
+
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            tracer, span_name, setup_kwargs = setup(args, kwargs)
+
             if inject:
-                kwargs["span"] = tracer.start_span(
-                    span_name,
-                    context=context,
-                    kind=kind,
-                    attributes=_attrs,
-                    links=_links,
-                )
+                kwargs["span"] = tracer.start_span(span_name, **setup_kwargs)
                 return func(*args, **kwargs)
             else:
-                with tracer.start_as_current_span(
-                    span_name,
-                    context=context,
-                    kind=kind,
-                    attributes=_attrs,
-                    links=_links,
-                ):
+                with tracer.start_as_current_span(span_name, **setup_kwargs):
                     return func(*args, **kwargs)
 
-        return wrapper
+        @wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            tracer, span_name, setup_kwargs = setup(args, kwargs)
+
+            if inject:
+                kwargs["span"] = tracer.start_span(span_name, **setup_kwargs)
+                return await func(*args, **kwargs)
+            else:
+                with tracer.start_as_current_span(span_name, **setup_kwargs):
+                    return await func(*args, **kwargs)
+
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper
+        else:
+            return wrapper
 
     return inner_function
 

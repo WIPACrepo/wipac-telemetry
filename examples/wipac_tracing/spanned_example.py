@@ -1,6 +1,7 @@
 """Example script for the spanned() decorator."""
 
 
+import asyncio
 import logging
 import os
 import sys
@@ -167,6 +168,24 @@ def example_11_no_attributes(  # pylint: disable=W0613,C0103,R0913
     logging.info(msg)
 
 
+@tracing_tools.spanned()
+async def example_20_async() -> None:
+    """Print and log simple message."""
+
+    @tracing_tools.spanned()
+    def example_20_inner_sync() -> None:
+        print("inner-sync function")
+
+    @tracing_tools.spanned()
+    async def example_20_inner_async() -> None:
+        await asyncio.sleep(10)
+        print("inner-async function")
+
+    example_20_inner_sync()
+    await example_20_inner_async()
+    print("Done with async example.")
+
+
 if __name__ == "__main__":
     coloredlogs.install(level="DEBUG")
 
@@ -253,3 +272,6 @@ if __name__ == "__main__":
         a7=(1, 2, 3, 4, 5, 6),
         a5=55,
     )
+
+    logging.warning("EXAMPLE #20")
+    asyncio.get_event_loop().run_until_complete(example_20_async())
