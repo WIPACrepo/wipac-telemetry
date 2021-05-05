@@ -1,6 +1,9 @@
 """Init."""
 
 
+import os
+from distutils.util import strtobool
+
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import]
     OTLPSpanExporter,
@@ -25,8 +28,10 @@ trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
     # output to stdout
     SimpleSpanProcessor(ConsoleSpanExporter())
 )
-# trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
-#     # relies on env variables
-#     # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
-#     BatchSpanProcessor(OTLPSpanExporter())
-# )
+
+if strtobool(os.environ.get("WIPACTEL_EXPORT_OTLP", "0").lower()):
+    trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
+        # relies on env variables
+        # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
+        BatchSpanProcessor(OTLPSpanExporter())
+    )
