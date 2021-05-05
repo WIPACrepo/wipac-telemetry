@@ -6,6 +6,7 @@ from functools import wraps
 from typing import Any, Callable, List, Optional
 
 from opentelemetry import trace
+from opentelemetry.propagate import extract
 from opentelemetry.util import types
 
 from .utils import (
@@ -25,6 +26,7 @@ def spanned(
     these: Optional[List[str]] = None,
     inject: bool = False,
     links: Optional[List[str]] = None,
+    from_client: bool = False,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -36,8 +38,10 @@ def spanned(
         all_args -- whether to auto-add all the function-arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
         inject -- whether to inject the span instance into the function (as `span`).
-                  *`inject=True` won't set as current span nor automatically exit once function is done.*
+                  (`inject=True` won't set as current span nor automatically exit once function is done.)
         links -- a list of variable names of `Link` instances (span-links) - useful for cross-process tracing
+        from_client -- whether this span should be contextually connected to a client service's span
+                       (looks at `self.request` instance for necessary info)
 
     Raises a `ValueError` when attempting to self-link the injected span.
     """
@@ -52,6 +56,14 @@ def spanned(
                 raise ValueError("Cannot self-link the injected span: `span`")
 
             func_inspect = FunctionInspection(func, args, kwargs)
+
+            if from_client:
+                context = extract(func_inspect.rget("self.request.headers"))
+                kind = trace.SpanKind.SERVER
+            else:
+                context = None  # `None` will default to current context
+                kind = trace.SpanKind.INTERNAL
+
             _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
             _links = _wrangle_links(func_inspect, links)
 
@@ -64,12 +76,20 @@ def spanned(
             )
             if inject:
                 kwargs["span"] = tracer.start_span(
-                    span_name, attributes=_attrs, links=_links
+                    span_name,
+                    context=context,
+                    kind=kind,
+                    attributes=_attrs,
+                    links=_links,
                 )
                 return func(*args, **kwargs)
             else:
                 with tracer.start_as_current_span(
-                    span_name, attributes=_attrs, links=_links
+                    span_name,
+                    context=context,
+                    kind=kind,
+                    attributes=_attrs,
+                    links=_links,
                 ):
                     return func(*args, **kwargs)
 
