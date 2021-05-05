@@ -1,5 +1,6 @@
 """Example script for the evented() decorator."""
 
+import asyncio
 import logging
 import os
 import sys
@@ -87,6 +88,24 @@ class EventExampleClass:
         self.evented_and_spanned_fellow_method("The Sixth Beatle?!")
 
 
+@tracing_tools.spanned()
+async def example_2_async() -> None:
+    """Print and log simple message."""
+
+    @tracing_tools.evented()
+    def _inner_sync() -> None:
+        print("inner-sync function")
+
+    @tracing_tools.evented()
+    async def _inner_async() -> None:
+        await asyncio.sleep(10)
+        print("inner-async function")
+
+    _inner_sync()
+    await _inner_async()
+    print("Done with async example.")
+
+
 if __name__ == "__main__":
     coloredlogs.install(level="DEBUG")
 
@@ -94,3 +113,6 @@ if __name__ == "__main__":
     EventExampleClass().spanned_caller_method(
         "Sgt. Pepper's Lonely Hearts Club Band", 1967
     )
+
+    logging.warning("EXAMPLE #2 - NESTED ASYNC")
+    asyncio.get_event_loop().run_until_complete(example_2_async())

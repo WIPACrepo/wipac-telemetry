@@ -4,7 +4,7 @@
 import asyncio
 import inspect
 from functools import wraps
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Tuple
 
 from opentelemetry import trace
 from opentelemetry.propagate import extract
@@ -50,7 +50,7 @@ def spanned(
     """
     # TODO - what is `is_remote`?
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
-        def setup(args: Args, kwargs: Kwargs):
+        def setup(args: Args, kwargs: Kwargs) -> Tuple[trace.Tracer, str, Kwargs]:
             span_name = name if name else func.__qualname__  # Ex: MyClass.method
             tracer_name = inspect.getfile(func)  # Ex: /path/to/source_file.py
 

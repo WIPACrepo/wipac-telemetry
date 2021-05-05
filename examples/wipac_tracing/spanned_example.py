@@ -173,16 +173,16 @@ async def example_20_async() -> None:
     """Print and log simple message."""
 
     @tracing_tools.spanned()
-    def example_20_inner_sync() -> None:
+    def _inner_sync() -> None:
         print("inner-sync function")
 
     @tracing_tools.spanned()
-    async def example_20_inner_async() -> None:
+    async def _inner_async() -> None:
         await asyncio.sleep(10)
         print("inner-async function")
 
-    example_20_inner_sync()
-    await example_20_inner_async()
+    _inner_sync()
+    await _inner_async()
     print("Done with async example.")
 
 
@@ -273,5 +273,5 @@ if __name__ == "__main__":
         a5=55,
     )
 
-    logging.warning("EXAMPLE #20")
+    logging.warning("EXAMPLE #20 - NESTED ASYNC")
     asyncio.get_event_loop().run_until_complete(example_20_async())
