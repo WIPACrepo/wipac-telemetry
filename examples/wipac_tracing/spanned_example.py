@@ -193,12 +193,17 @@ def example_30_iter_a_generator() -> None:
 
     @tracing_tools.spanned()
     def _gen():
-        for i in range(10):
+        for i in range(5):
             yield i
+
+    gen = _gen()
+    for num in gen:
+        print(num)
+        time.sleep(0.25)
 
     for num in _gen():
         print(num)
-        time.sleep(0.5)
+        time.sleep(0.25)
 
 
 if __name__ == "__main__":

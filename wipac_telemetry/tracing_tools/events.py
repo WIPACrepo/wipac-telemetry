@@ -2,6 +2,7 @@
 
 
 import asyncio
+import inspect
 from functools import wraps
 from typing import Any, Callable, List, Optional, Tuple
 
@@ -52,7 +53,7 @@ def evented(
                     raise RuntimeError("There is no currently recording span context.")
                 _span = get_current_span()
 
-            LOGGER.debug(
+            LOGGER.info(
                 f"Recorded event `{event_name}` for span `{_span.name}` with: "
                 f"attributes={list(_attrs.keys()) if _attrs else []}"
             )
@@ -61,12 +62,24 @@ def evented(
 
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
+            LOGGER.debug("Evented Function")
             _span, event_name, setup_kwargs = setup(args, kwargs)
             _span.add_event(event_name, **setup_kwargs)
             return func(*args, **kwargs)
 
         @wraps(func)
+        def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+            LOGGER.debug("Evented Generator Function")
+            _span, event_name, setup_kwargs = setup(args, kwargs)
+            _span.add_event(f"{event_name}#enter", **setup_kwargs)
+            for i, val in enumerate(func(*args, **kwargs)):
+                _span.add_event(f"{event_name}#{i}", **setup_kwargs)
+                yield val
+            _span.add_event(f"{event_name}#exit", **setup_kwargs)
+
+        @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            LOGGER.debug("Evented Async Function")
             _span, event_name, setup_kwargs = setup(args, kwargs)
             _span.add_event(event_name, **setup_kwargs)
             return await func(*args, **kwargs)
@@ -74,8 +87,10 @@ def evented(
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
-            # event for each iter
-            return wrapper
+            if inspect.isgeneratorfunction(func):
+                return gen_wrapper
+            else:
+                return wrapper
 
     return inner_function
 

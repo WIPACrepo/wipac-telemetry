@@ -90,7 +90,7 @@ def spanned(
 
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            LOGGER.debug("Wrapped Function")
+            LOGGER.debug("Spanned Function")
             tracer, span_name, setup_kwargs = setup(args, kwargs)
 
             if inject:
@@ -102,7 +102,7 @@ def spanned(
 
         @wraps(func)
         def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
-            LOGGER.debug("Wrapped Generator Function")
+            LOGGER.debug("Spanned Generator Function")
             tracer, span_name, setup_kwargs = setup(args, kwargs)
 
             if inject:
@@ -116,7 +116,7 @@ def spanned(
 
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-            LOGGER.debug("Wrapped Async Function")
+            LOGGER.debug("Spanned Async Function")
             tracer, span_name, setup_kwargs = setup(args, kwargs)
 
             if inject:
