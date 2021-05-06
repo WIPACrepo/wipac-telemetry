@@ -4,7 +4,7 @@
 import asyncio
 import inspect
 from functools import wraps
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 from opentelemetry import trace
 from opentelemetry.propagate import extract
@@ -30,8 +30,7 @@ def spanned(
     these: Optional[List[str]] = None,
     inject: bool = False,
     links: Optional[List[str]] = None,
-    from_client: bool = False,
-    kind: SpanKind = SpanKind.INTERNAL,
+    kind: Union[SpanKind, str] = SpanKind.INTERNAL,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -45,10 +44,14 @@ def spanned(
         inject -- whether to inject the span instance into the function (as `span`).
                   (`inject=True` won't set as current span nor automatically exit once function is done.)
         links -- a list of variable names of `Link` instances (span-links) - useful for cross-process tracing
-        from_client -- whether this span should be contextually connected to a client service's span
-                       (looks at `self.request` instance for necessary info)
-                       labels as `SpanKind.SERVER`
-        kind -- `SpanKind.INTERNAL`, `SpanKind.CLIENT`, `SpanKind.SERVER`, `SpanKind.CONSUMER`, or `SpanKind.PRODUCER`
+        kind -- either a `SpanKind` enum value or an equivalent str
+                - `"INTERNAL"`/`SpanKind.INTERNAL` - (default) normal, in-application spans
+                - `"CLIENT"`/`SpanKind.CLIENT` - spanned function makes outgoing cross-service requests
+                - `"SERVER"`/`SpanKind.SERVER` - spanned function handles incoming cross-service requests
+                    * contextually connected to a client-service's span via parent pointer
+                    * (looks at `self.request` instance for necessary info)
+                - `"CONSUMER"`/`SpanKind.CONSUMER` - spanned function makes outgoing cross-service messages
+                - `"PRODUCER"`/`SpanKind.PRODUCER` - spanned function handles incoming cross-service messages
 
     Raises a `ValueError` when attempting to self-link the injected span.
     """
@@ -63,12 +66,15 @@ def spanned(
 
             func_inspect = FunctionInspection(func, args, kwargs)
 
-            if from_client:
+            if isinstance(kind, SpanKind):
+                _kind = kind
+            else:
+                _kind = SpanKind[kind.lower()]  # type: ignore[misc]
+
+            if _kind == SpanKind.SERVER:
                 context = extract(func_inspect.rget("self.request.headers"))
-                _kind = SpanKind.SERVER
             else:
                 context = None  # `None` will default to current context
-                _kind = kind
 
             _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
             _links = _wrangle_links(func_inspect, links)
