@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 import time
-from typing import Dict, List, Optional
+from typing import Dict, Generator, List, Optional
 
 import coloredlogs  # type: ignore[import]
 
@@ -192,7 +192,7 @@ def example_30_iter_a_generator() -> None:
     """Span a generator."""
 
     @tracing_tools.spanned()
-    def _gen():
+    def _gen() -> Generator[int, None, None]:
         for i in range(5):
             yield i
 

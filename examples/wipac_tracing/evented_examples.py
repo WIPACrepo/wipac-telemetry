@@ -112,7 +112,7 @@ def example_3_iter_a_generator() -> None:
     """Span a generator."""
 
     @tracing_tools.evented()
-    def _gen():
+    def _gen() -> Generator[int, None, None]:
         for i in range(5):
             yield i
 

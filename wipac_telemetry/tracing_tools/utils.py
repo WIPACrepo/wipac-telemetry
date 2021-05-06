@@ -28,6 +28,7 @@ Span = trace.Span
 OptSpan = Optional[Span]  # alias used for Span-argument injection
 Link = trace.Link
 get_current_span = trace.get_current_span
+SpanKind = trace.SpanKind
 
 
 # Classes/Functions ####################################################################

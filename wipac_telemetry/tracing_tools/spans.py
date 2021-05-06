@@ -17,6 +17,7 @@ from .utils import (
     Kwargs,
     Link,
     Span,
+    SpanKind,
     convert_to_attributes,
     wrangle_attributes,
 )
@@ -30,6 +31,7 @@ def spanned(
     inject: bool = False,
     links: Optional[List[str]] = None,
     from_client: bool = False,
+    kind: SpanKind = SpanKind.INTERNAL,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -45,6 +47,8 @@ def spanned(
         links -- a list of variable names of `Link` instances (span-links) - useful for cross-process tracing
         from_client -- whether this span should be contextually connected to a client service's span
                        (looks at `self.request` instance for necessary info)
+                       labels as `SpanKind.SERVER`
+        kind -- `SpanKind.INTERNAL`, `SpanKind.CLIENT`, `SpanKind.SERVER`, `SpanKind.CONSUMER`, or `SpanKind.PRODUCER`
 
     Raises a `ValueError` when attempting to self-link the injected span.
     """
@@ -61,10 +65,10 @@ def spanned(
 
             if from_client:
                 context = extract(func_inspect.rget("self.request.headers"))
-                kind = trace.SpanKind.SERVER
+                _kind = SpanKind.SERVER
             else:
                 context = None  # `None` will default to current context
-                kind = trace.SpanKind.INTERNAL
+                _kind = kind
 
             _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
             _links = _wrangle_links(func_inspect, links)
@@ -82,7 +86,7 @@ def spanned(
                 span_name,
                 {
                     "context": context,
-                    "kind": kind,
+                    "kind": _kind,
                     "attributes": _attrs,
                     "links": _links,
                 },
