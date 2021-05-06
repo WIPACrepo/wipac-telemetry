@@ -69,7 +69,7 @@ def spanned(
             if isinstance(kind, SpanKind):
                 _kind = kind
             else:
-                _kind = SpanKind[kind.lower()]  # type: ignore[misc]
+                _kind = SpanKind[kind.upper()]  # type: ignore[misc]
 
             if _kind == SpanKind.SERVER:
                 context = extract(func_inspect.rget("self.request.headers"))
