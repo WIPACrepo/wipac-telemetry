@@ -74,6 +74,7 @@ def evented(
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
+            # event for each iter
             return wrapper
 
     return inner_function

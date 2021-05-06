@@ -71,7 +71,7 @@ def spanned(
 
             tracer = trace.get_tracer(tracer_name)
 
-            LOGGER.debug(
+            LOGGER.info(
                 f"Started span `{span_name}` for tracer `{tracer_name}` with: "
                 f"attributes={list(_attrs.keys()) if _attrs else []}, "
                 f"links={[k.context for k in _links]}"
@@ -90,6 +90,7 @@ def spanned(
 
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
+            LOGGER.debug("Wrapped Function")
             tracer, span_name, setup_kwargs = setup(args, kwargs)
 
             if inject:
@@ -100,7 +101,22 @@ def spanned(
                     return func(*args, **kwargs)
 
         @wraps(func)
+        def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+            LOGGER.debug("Wrapped Generator Function")
+            tracer, span_name, setup_kwargs = setup(args, kwargs)
+
+            if inject:
+                kwargs["span"] = tracer.start_span(span_name, **setup_kwargs)
+                for val in func(*args, **kwargs):
+                    yield val
+            else:
+                with tracer.start_as_current_span(span_name, **setup_kwargs):
+                    for val in func(*args, **kwargs):
+                        yield val
+
+        @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            LOGGER.debug("Wrapped Async Function")
             tracer, span_name, setup_kwargs = setup(args, kwargs)
 
             if inject:
@@ -113,7 +129,10 @@ def spanned(
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
-            return wrapper
+            if inspect.isgeneratorfunction(func):
+                return gen_wrapper
+            else:
+                return wrapper
 
     return inner_function
 

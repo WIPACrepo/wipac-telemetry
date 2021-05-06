@@ -5,6 +5,7 @@ import asyncio
 import logging
 import os
 import sys
+import time
 from typing import Dict, List, Optional
 
 import coloredlogs  # type: ignore[import]
@@ -178,12 +179,26 @@ async def example_20_async() -> None:
 
     @tracing_tools.spanned()
     async def _inner_async() -> None:
-        await asyncio.sleep(10)
+        await asyncio.sleep(2)
         print("inner-async function")
 
     _inner_sync()
     await _inner_async()
     print("Done with async example.")
+
+
+@tracing_tools.spanned()
+def example_30_iter_a_generator() -> None:
+    """Span a generator."""
+
+    @tracing_tools.spanned()
+    def _gen():
+        for i in range(10):
+            yield i
+
+    for num in _gen():
+        print(num)
+        time.sleep(0.5)
 
 
 if __name__ == "__main__":
@@ -275,3 +290,6 @@ if __name__ == "__main__":
 
     logging.warning("EXAMPLE #20 - NESTED ASYNC")
     asyncio.get_event_loop().run_until_complete(example_20_async())
+
+    logging.warning("EXAMPLE #30 - GENERATOR")
+    example_30_iter_a_generator()
