@@ -66,6 +66,7 @@ class FunctionInspection:
             AttributeError -- if var_name is not found
             TypeError -- if the instance is found, but isn't of the type(s) indicated
         """
+        LOGGER.debug(f"rget: {var_name}")
         # very any dict-access, and convert bracket-quote syntax to dot syntax
         if "[" in var_name:
             for i, char in enumerate(var_name):
@@ -96,6 +97,7 @@ class FunctionInspection:
                 return getattr(obj, attr)
 
         def _rget(obj: Any, attr: str) -> Any:
+            LOGGER.debug(f"rget: {var_name} -> obj={obj}({type(attr)}) attr={attr}")
             if not attr:
                 return obj
             elif "." in attr:
