@@ -56,30 +56,18 @@ class FunctionInspection:
         Searches:
             - non-callable objects
             - supports nested/chained attributes (including `self.*` attributes)
-            - supports literal dict-member access, both dot and bracket-quote syntax
+            - supports literal dict-member access in dot syntax,
+                + ex: for bam['boom'] use bam.boom
 
         Examples:
             signature -> (self, foo)
-            variable names -> self.green, foo, foo.bar.baz, foo.bam['boom'] or foo.bam.boom
+            variable names -> self.green, foo, foo.bar.baz, foo.bam.boom
 
         Raises:
             AttributeError -- if var_name is not found
             TypeError -- if the instance is found, but isn't of the type(s) indicated
         """
-        LOGGER.debug(f"rget: {var_name}")
-        # very any dict-access, and convert bracket-quote syntax to dot syntax
-        if "[" in var_name:
-            for i, char in enumerate(var_name):
-                try:
-                    if char == "[" and var_name[i + 1] not in ['"', "'"]:
-                        raise AttributeError(
-                            f"'{var_name}': cannot contain variable dict-keys"
-                        )
-                except IndexError:
-                    raise AttributeError(f"'{var_name}': malformed dict syntax")
-            var_name = var_name.replace("[", ".")
-            for char in ["'", '"', "]"]:
-                var_name = var_name.replace(char, "")
+        LOGGER.debug(f"rget({var_name}, {typ})")
 
         def dot_left(string: str) -> str:
             return string.split(".", maxsplit=1)[0]
@@ -97,7 +85,6 @@ class FunctionInspection:
                 return getattr(obj, attr)
 
         def _rget(obj: Any, attr: str) -> Any:
-            LOGGER.debug(f"rget: {var_name} -> obj={obj}({type(attr)}) attr={attr}")
             if not attr:
                 return obj
             elif "." in attr:
