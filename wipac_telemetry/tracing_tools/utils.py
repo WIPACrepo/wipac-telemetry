@@ -10,9 +10,12 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from opentelemetry import trace
 from opentelemetry.util import types
 
+from .config import CONFIG
+
 # Constants ############################################################################
 
 LOGGER = logging.getLogger("wipac-telemetry")
+LOGGER.setLevel(CONFIG["WIPACTEL_LOGGING_LEVEL"])
 
 
 # Types ################################################################################
