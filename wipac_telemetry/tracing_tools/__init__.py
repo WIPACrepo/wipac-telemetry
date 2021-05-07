@@ -24,12 +24,13 @@ from .utils import Link, OptSpan, Span, SpanKind, get_current_span  # noqa
 
 trace.set_tracer_provider(TracerProvider())
 
-trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
-    # output to stdout
-    SimpleSpanProcessor(ConsoleSpanExporter())
-)
+if strtobool(os.environ.get("WIPACTEL_EXPORT_STDOUT", "YES").lower()):
+    trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
+        # output to stdout
+        SimpleSpanProcessor(ConsoleSpanExporter())
+    )
 
-if strtobool(os.environ.get("WIPACTEL_EXPORT_OTLP", "0").lower()):
+if strtobool(os.environ.get("WIPACTEL_EXPORT_OTLP", "NO").lower()):
     trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
         # relies on env variables
         # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
