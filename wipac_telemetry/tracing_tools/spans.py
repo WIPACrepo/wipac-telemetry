@@ -67,11 +67,11 @@ def spanned(
             func_inspect = FunctionInspection(func, args, kwargs)
 
             _kind = kind if isinstance(kind, SpanKind) else SpanKind[kind.upper()]  # type: ignore[misc]
-            context = (
-                extract(func_inspect.rget("self.request.headers"))
-                if _kind == SpanKind.SERVER
-                else None  # `None` will default to current context
-            )
+            if _kind == SpanKind.SERVER:
+                context = extract(func_inspect.rget("self.request.headers"))
+            else:
+                context = None  # `None` will default to current context
+
             _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
             _links = _wrangle_links(func_inspect, links)
 
