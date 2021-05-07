@@ -66,20 +66,14 @@ def spanned(
 
             func_inspect = FunctionInspection(func, args, kwargs)
 
-            if isinstance(kind, SpanKind):
-                _kind = kind
-            else:
-                _kind = SpanKind[kind.upper()]  # type: ignore[misc]
-
-            if _kind == SpanKind.SERVER:
-                context = extract(func_inspect.rget("self.request.headers"))
-            else:
-                context = None  # `None` will default to current context
-
+            _kind = kind if isinstance(kind, SpanKind) else SpanKind[kind.upper()]  # type: ignore[misc]
+            context = (
+                extract(func_inspect.rget("self.request.headers"))
+                if _kind == SpanKind.SERVER
+                else None  # `None` will default to current context
+            )
             _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
             _links = _wrangle_links(func_inspect, links)
-
-            tracer = trace.get_tracer(tracer_name)
 
             LOGGER.info(
                 f"Started span `{span_name}` for tracer `{tracer_name}` with: "
@@ -88,7 +82,7 @@ def spanned(
             )
 
             return (
-                tracer,
+                trace.get_tracer(tracer_name),
                 span_name,
                 {
                     "context": context,
