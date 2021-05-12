@@ -20,6 +20,18 @@ from .events import evented  # noqa
 from .spans import make_link, spanned  # noqa
 from .utils import Link, OptSpan, Span, SpanKind, get_current_span  # noqa
 
+__all__ = [
+    "propagations",
+    "evented",
+    "make_link",
+    "spanned",
+    "Link",
+    "OptSpan",
+    "Span",
+    "SpanKind",
+    "get_current_span",
+]
+
 # Config SDK ###########################################################################
 
 trace.set_tracer_provider(TracerProvider())
