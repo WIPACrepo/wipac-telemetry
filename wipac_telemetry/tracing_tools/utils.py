@@ -3,16 +3,15 @@
 
 import copy
 import inspect
-import logging
 from collections.abc import Sequence
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from opentelemetry import trace
 from opentelemetry.util import types
 
-# Constants ############################################################################
+from .config import LOGGER
 
-LOGGER = logging.getLogger("wipac-telemetry")
+# Constants ############################################################################
 
 
 # Types ################################################################################

@@ -1,3 +1,4 @@
+git+https://github.com/WIPACrepo/wipac-dev-tools@v1.0.2#egg=wipac_dev_tools
 opentelemetry-api
 opentelemetry-exporter-jaeger
 opentelemetry-exporter-otlp
