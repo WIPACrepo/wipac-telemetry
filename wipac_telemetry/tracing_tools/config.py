@@ -14,7 +14,7 @@ class _TypedConfig(TypedDict):
 
 
 defaults: _TypedConfig = {
-    "WIPACTEL_EXPORT_STDOUT": False,
+    "WIPACTEL_EXPORT_STDOUT": True,
     "WIPACTEL_EXPORT_OTLP": False,
     "WIPACTEL_LOGGING_LEVEL": "WARNING",
 }
