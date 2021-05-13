@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 import time
+from typing import Generator
 
 import coloredlogs  # type: ignore[import]
 
