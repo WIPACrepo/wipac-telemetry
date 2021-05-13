@@ -25,10 +25,9 @@ from .utils import (
 
 
 class SpanBehavior(Enum):
-    """Enum for indicating type of span for manual use."""
+    """Enum for indicating type of span behavior is wanted."""
 
     AUTO_CURRENT_SPAN = auto()
-    MANUAL_CURRENT_SPAN = auto()
     INDEPENDENT_SPAN = auto()
 
 
@@ -59,14 +58,10 @@ def spanned(
                         + start span as the current span (accessible via `get_current_span()`)
                         + automatically exit after function returns
                         + default value
-                    - `SpanBehavior.MANUAL_CURRENT_SPAN`
-                        + start span as the current span (accessible via `get_current_span()`)
-                        + requires a call to `__exit__()`
-                        + can be persisted between independent functions
                     - `SpanBehavior.INDEPENDENT_SPAN`
                         + start span NOT as the current span
                         + injects span instance into the function/method's argument list as `span`
-                        + requires a call to `span.end()`
+                        + requires a call to `span.end()` to send traces
                         + can be persisted between independent functions
         links -- a list of variable names of `Link` instances (span-links) - useful for cross-process tracing
         kind -- either a `SpanKind` enum value or an equivalent str
@@ -131,9 +126,6 @@ def spanned(
             elif behavior == SpanBehavior.INDEPENDENT_SPAN:
                 kwargs["span"] = tracer.start_span(span_name, **setup_kwargs)
                 return func(*args, **kwargs)
-            elif behavior == SpanBehavior.MANUAL_CURRENT_SPAN:
-                tracer.start_as_current_span(span_name, **setup_kwargs).__enter__()
-                return func(*args, **kwargs)
             else:
                 raise InvalidSpanBehaviorValue(behavior)
 
@@ -158,10 +150,6 @@ def spanned(
                 kwargs["span"] = tracer.start_span(span_name, **setup_kwargs)
                 for val in func(*args, **kwargs):
                     yield val
-            elif behavior == SpanBehavior.MANUAL_CURRENT_SPAN:
-                tracer.start_as_current_span(span_name, **setup_kwargs).__enter__()
-                for val in func(*args, **kwargs):
-                    yield val
             else:
                 raise InvalidSpanBehaviorValue(behavior)
 
@@ -175,9 +163,6 @@ def spanned(
                     return await func(*args, **kwargs)
             elif behavior == SpanBehavior.INDEPENDENT_SPAN:
                 kwargs["span"] = tracer.start_span(span_name, **setup_kwargs)
-                return await func(*args, **kwargs)
-            elif behavior == SpanBehavior.MANUAL_CURRENT_SPAN:
-                tracer.start_as_current_span(span_name, **setup_kwargs).__enter__()
                 return await func(*args, **kwargs)
             else:
                 raise InvalidSpanBehaviorValue(behavior)
