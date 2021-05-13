@@ -20,26 +20,19 @@ class DemoPitfallsClass:
     """Handle methods using a Span instance as a instance variable."""
 
     def __init__(self) -> None:
-        self.span = None
-        DemoPitfallsClass.static_start_span(self)
-        self.span.add_event("started span from static method")
+        self.method_that_also_starts_a_span()
+        self.span.add_event("(__init__) started span from instance method")
 
-    ##################
-
-    # NOT OKAY
     @tracing_tools.spanned(behavior=tracing_tools.SpanBehavior.INDEPENDENT_SPAN)
-    def invalid_start_span(self, span: tracing_tools.OptSpan = None) -> None:
-        """ERROR: making an instance-originated span is not supported, will break if called."""
-        self.span = span
-
-    # USE THIS INSTEAD
-    @staticmethod
-    @tracing_tools.spanned(behavior=tracing_tools.SpanBehavior.INDEPENDENT_SPAN)
-    def static_start_span(
-        inst: "DemoPitfallsClass", span: tracing_tools.OptSpan = None
+    def method_that_also_starts_a_span(
+        self, span: tracing_tools.OptSpan = None
     ) -> None:
-        """Inject span then pass into instance."""
-        inst.span = span
+        """Do some things and start an independent span."""
+        assert span
+        assert span.is_recording()
+        assert not tracing_tools.get_current_span().is_recording()
+        self.span = span
+        self.span.add_event("(method) started span from instance method")
 
     ##################
 
@@ -67,10 +60,10 @@ class ExternalClass:
     def __init__(self, span: tracing_tools.Span) -> None:
         self.span = span
 
-    @tracing_tools.spanned()
-    def independent_inner_span(self):
+    @tracing_tools.spanned()  # sets current_span
+    def disjoint_spanned_method(self):
         """A method containing an distinct/unrelated span context."""
-        print("inner span")
+        print("disjoint_spanned_method")
 
         @tracing_tools.evented(all_args=True)
         def inner_event(name: str, height: int) -> None:
@@ -97,7 +90,7 @@ def injected_span_pass_to_instance(span: tracing_tools.OptSpan = None) -> Extern
 
     span.set_attribute("Random Int", random.randint(0, 9))
     instance = ExternalClass(span)
-    instance.independent_inner_span()
+    instance.disjoint_spanned_method()
     return instance
 
 
@@ -109,7 +102,7 @@ if __name__ == "__main__":
 
     logging.warning("EXAMPLE #0 - CLASS METHOD W/ SPAN-INJECTION")
     inst = DemoPitfallsClass()
-    # inst.invalid_start_span()
+    # inst.method_that_also_starts_a_span()
     inst.end()  # NOTE: traces aren't sent until the span is closed / raises
 
     logging.warning("EXAMPLE #1 - FUNCTION W/ SPAN-INJECTION")
