@@ -27,14 +27,14 @@ class DemoPitfallsClass:
     ##################
 
     # NOT OKAY
-    @tracing_tools.spanned(inject=True)
+    @tracing_tools.spanned(behavior=tracing_tools.SpanBehavior.INDEPENDENT_SPAN)
     def invalid_start_span(self, span: tracing_tools.OptSpan = None) -> None:
         """ERROR: making an instance-originated span is not supported, will break if called."""
         self.span = span
 
     # USE THIS INSTEAD
     @staticmethod
-    @tracing_tools.spanned(inject=True)
+    @tracing_tools.spanned(behavior=tracing_tools.SpanBehavior.INDEPENDENT_SPAN)
     def static_start_span(
         inst: "DemoPitfallsClass", span: tracing_tools.OptSpan = None
     ) -> None:
@@ -87,7 +87,9 @@ class ExternalClass:
     #         self.span.end()
 
 
-@tracing_tools.spanned(inject=True, attributes={"a": 1})
+@tracing_tools.spanned(
+    behavior=tracing_tools.SpanBehavior.INDEPENDENT_SPAN, attributes={"a": 1}
+)
 def injected_span_pass_to_instance(span: tracing_tools.OptSpan = None) -> ExternalClass:
     """Inject a span then pass onto an instance."""
     if not span:

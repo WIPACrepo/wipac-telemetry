@@ -19,6 +19,7 @@ from wipac_telemetry.tracing_tools import (  # noqa: E402 # pylint: disable=C041
     Link,
     OptSpan,
     Span,
+    SpanBehavior,
     make_link,
 )
 
@@ -64,7 +65,7 @@ class Client:
     def __init__(self, server: Server) -> None:
         self.server = server
 
-    @tracing_tools.spanned(inject=True, these=["urgent"])
+    @tracing_tools.spanned(behavior=SpanBehavior.INDEPENDENT_SPAN, these=["urgent"])
     def send_1_with_injection(
         self, message: str, span: OptSpan = None, urgent: bool = False, delay: int = 0
     ) -> None:

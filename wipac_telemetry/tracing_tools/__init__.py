@@ -15,7 +15,7 @@ from opentelemetry.sdk.trace.export import (  # type: ignore[import]
 from . import propagations  # noqa
 from .config import CONFIG
 from .events import evented  # noqa
-from .spans import make_link, spanned  # noqa
+from .spans import SpanBehavior, make_link, spanned  # noqa
 from .utils import Link, OptSpan, Span, SpanKind, get_current_span  # noqa
 
 __all__ = [
@@ -28,6 +28,7 @@ __all__ = [
     "Span",
     "SpanKind",
     "get_current_span",
+    "SpanBehavior",
 ]
 
 # Config SDK ###########################################################################

@@ -15,10 +15,11 @@ from wipac_telemetry import tracing_tools  # noqa: E402 # pylint: disable=C0413,
 from wipac_telemetry.tracing_tools import (  # noqa: E402 # pylint: disable=C0413
     OptSpan,
     Span,
+    SpanBehavior,
 )
 
 
-@tracing_tools.spanned(inject=True)
+@tracing_tools.spanned(behavior=SpanBehavior.INDEPENDENT_SPAN)
 def the_one_that_returns_a_span(span: OptSpan = None) -> Span:
     """Use Span-injection to set the span."""
     logging.info("the_one_that_returns_a_span()")

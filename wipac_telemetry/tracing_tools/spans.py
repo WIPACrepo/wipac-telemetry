@@ -78,7 +78,8 @@ def spanned(
                 - `"CONSUMER"`/`SpanKind.CONSUMER` - spanned function makes outgoing cross-service messages
                 - `"PRODUCER"`/`SpanKind.PRODUCER` - spanned function handles incoming cross-service messages
 
-    Raises a `ValueError` when attempting to self-link the injected span.
+    Raises a `ValueError` when attempting to self-link the independent/injected span
+    Raises a `InvalidSpanBehaviorValue` when an invalid `behavior` value is attempted
     """
     # TODO - what is `is_remote`?
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
