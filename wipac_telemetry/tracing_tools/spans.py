@@ -5,7 +5,7 @@ import asyncio
 import inspect
 from enum import Enum, auto
 from functools import wraps
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Tuple
 
 from opentelemetry import trace
 from opentelemetry.propagate import extract
@@ -42,7 +42,7 @@ def spanned(
     these: Optional[List[str]] = None,
     behavior: SpanBehavior = SpanBehavior.AUTO_CURRENT_SPAN,
     links: Optional[List[str]] = None,
-    kind: Union[SpanKind, str] = SpanKind.INTERNAL,
+    kind: SpanKind = SpanKind.INTERNAL,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -64,14 +64,14 @@ def spanned(
                         + requires a call to `span.end()` to send traces
                         + can be persisted between independent functions
         links -- a list of variable names of `Link` instances (span-links) - useful for cross-process tracing
-        kind -- either a `SpanKind` enum value or an equivalent str
-                - `"INTERNAL"`/`SpanKind.INTERNAL` - (default) normal, in-application spans
-                - `"CLIENT"`/`SpanKind.CLIENT` - spanned function makes outgoing cross-service requests
-                - `"SERVER"`/`SpanKind.SERVER` - spanned function handles incoming cross-service requests
+        kind -- a `SpanKind` enum value
+                - ``SpanKind.INTERNAL` - (default) normal, in-application spans
+                - `SpanKind.CLIENT` - spanned function makes outgoing cross-service requests
+                - `SpanKind.SERVER` - spanned function handles incoming cross-service requests
                     * contextually connected to a client-service's span via parent pointer
                     * (looks at `self.request` instance for necessary info)
-                - `"CONSUMER"`/`SpanKind.CONSUMER` - spanned function makes outgoing cross-service messages
-                - `"PRODUCER"`/`SpanKind.PRODUCER` - spanned function handles incoming cross-service messages
+                - `SpanKind.CONSUMER` - spanned function makes outgoing cross-service messages
+                - `SpanKind.PRODUCER` - spanned function handles incoming cross-service messages
 
     Raises a `ValueError` when attempting to self-link the independent/injected span
     Raises a `InvalidSpanBehaviorValue` when an invalid `behavior` value is attempted
@@ -89,8 +89,7 @@ def spanned(
 
             func_inspect = FunctionInspection(func, args, kwargs)
 
-            _kind = kind if isinstance(kind, SpanKind) else SpanKind[kind.upper()]  # type: ignore[misc]
-            if _kind == SpanKind.SERVER:
+            if kind == SpanKind.SERVER:
                 context = extract(func_inspect.rget("self.request.headers"))
             else:
                 context = None  # `None` will default to current context
@@ -109,7 +108,7 @@ def spanned(
                 span_name,
                 {
                     "context": context,
-                    "kind": _kind,
+                    "kind": kind,
                     "attributes": _attrs,
                     "links": _links,
                 },
