@@ -3,9 +3,8 @@
 
 import asyncio
 import inspect
-from enum import Enum, auto
 from functools import wraps
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Final, List, Optional, Tuple
 
 from opentelemetry import trace
 from opentelemetry.propagate import extract
@@ -24,11 +23,18 @@ from .utils import (
 )
 
 
-class SpanBehavior(Enum):
+class SpanBehavior:
     """Enum for indicating type of span behavior is wanted."""
 
-    AUTO_CURRENT_SPAN = auto()
-    INDEPENDENT_SPAN = auto()
+    def __init__(
+        self, end_on_exit: bool = True, independent: bool = False, reuse: str = ""
+    ):
+        self.end_on_exit = end_on_exit
+        self.indep = independent
+        self.reuse = reuse
+
+
+DEFAULT_SPAN_BEHAVIOR: Final = SpanBehavior()
 
 
 class InvalidSpanBehaviorValue(ValueError):
@@ -40,7 +46,7 @@ def spanned(
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
-    behavior: SpanBehavior = SpanBehavior.AUTO_CURRENT_SPAN,
+    behavior: SpanBehavior = DEFAULT_SPAN_BEHAVIOR,
     links: Optional[List[str]] = None,
     kind: SpanKind = SpanKind.INTERNAL,
 ) -> Callable[..., Any]:
@@ -53,7 +59,7 @@ def spanned(
         attributes -- a dict of attributes to add to span
         all_args -- whether to auto-add all the function-arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
-        behavior -- indicate what type of span behavior is wanted:
+        behavior -- TODO indicate what type of span behavior is wanted:
                     - `SpanBehavior.AUTO_CURRENT_SPAN`
                         + start span as the current span (accessible via `get_current_span()`)
                         + automatically exit after function returns
@@ -82,7 +88,7 @@ def spanned(
             span_name = name if name else func.__qualname__  # Ex: MyClass.method
             tracer_name = inspect.getfile(func)  # Ex: /path/to/source_file.py
 
-            if behavior == SpanBehavior.INDEPENDENT_SPAN and links and "span" in links:
+            if behavior.indep and links and "span" in links:
                 raise ValueError(
                     "Cannot self-link the independent/injected span: `span`"
                 )
