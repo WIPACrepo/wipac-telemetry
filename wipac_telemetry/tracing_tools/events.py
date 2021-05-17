@@ -8,15 +8,7 @@ from typing import Any, Callable, List, Optional, Tuple
 
 from opentelemetry.util import types
 
-from .utils import (
-    LOGGER,
-    Args,
-    FunctionInspection,
-    Kwargs,
-    Span,
-    get_current_span,
-    wrangle_attributes,
-)
+from .utils import LOGGER, Args, FunctionInspector, Kwargs, Span, get_current_span
 
 
 def evented(
@@ -43,11 +35,11 @@ def evented(
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         def setup(args: Args, kwargs: Kwargs) -> Tuple[Span, str, Kwargs]:
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
-            func_inspect = FunctionInspection(func, args, kwargs)
-            _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
+            func_inspect = FunctionInspector(func, args, kwargs)
+            _attrs = func_inspect.wrangle_span_attributes(all_args, these, attributes)
 
             if span_var_name:
-                _span = func_inspect.rget(span_var_name, Span)
+                _span = func_inspect.get_span(span_var_name)
             else:
                 if not get_current_span().is_recording():
                     raise RuntimeError("There is no currently recording span context.")

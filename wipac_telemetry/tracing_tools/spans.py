@@ -5,7 +5,7 @@ import asyncio
 import inspect
 from enum import Enum, auto
 from functools import wraps
-from typing import Any, Callable, List, Optional, cast
+from typing import Any, Callable, List, Optional
 
 from opentelemetry import trace
 from opentelemetry.propagate import extract
@@ -14,13 +14,12 @@ from opentelemetry.util import types
 from .utils import (
     LOGGER,
     Args,
-    FunctionInspection,
+    FunctionInspector,
     Kwargs,
     Link,
     Span,
     SpanKind,
     convert_to_attributes,
-    wrangle_attributes,
 )
 
 
@@ -88,15 +87,15 @@ def spanned(
                     "Cannot self-link the independent/injected span: `span`"
                 )
 
-            func_inspect = FunctionInspection(func, args, kwargs)
+            func_inspect = FunctionInspector(func, args, kwargs)
 
             if kind == SpanKind.SERVER:
-                context = extract(func_inspect.rget("self.request.headers"))
+                context = extract(func_inspect.resolve_attr("self.request.headers"))
             else:
                 context = None  # `None` will default to current context
 
-            _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
-            _links = _wrangle_links(func_inspect, links)
+            _attrs = func_inspect.wrangle_span_attributes(all_args, these, attributes)
+            _links = func_inspect.get_links(links)
 
             tracer = trace.get_tracer(tracer_name)
             span = tracer.start_span(
@@ -187,10 +186,10 @@ def respanned(
     # TODO - what is `is_remote`?
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         def setup(args: Args, kwargs: Kwargs) -> Span:
-            func_inspect = FunctionInspection(func, args, kwargs)
-            span = cast(Span, func_inspect.rget(span_var_name, Span))
+            func_inspect = FunctionInspector(func, args, kwargs)
+            span = func_inspect.get_span(span_var_name)
 
-            _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
+            _attrs = func_inspect.wrangle_span_attributes(all_args, these, attributes)
             if _attrs:
                 for key, value in _attrs.items():
                     span.set_attribute(key, value)  # TODO - check for duplicates
@@ -242,24 +241,6 @@ def respanned(
                 return wrapper
 
     return inner_function
-
-
-def _wrangle_links(
-    func_inspect: FunctionInspection, links: Optional[List[str]],
-) -> List[Link]:
-    if not links:
-        return []
-
-    out = []
-    for var_name in links:
-        try:
-            link = func_inspect.rget(var_name, Link)
-        except TypeError as e:
-            LOGGER.warning(e)  # this var_name could be a None value (aka an OptSpan)
-        else:
-            out.append(link)
-
-    return out
 
 
 def make_link(
