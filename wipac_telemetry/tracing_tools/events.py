@@ -24,7 +24,7 @@ def evented(
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
-    span: str = "",
+    span_var_name: str = "",
 ) -> Callable[..., Any]:
     """Decorate to trace a function as a new event.
 
@@ -35,7 +35,7 @@ def evented(
         attributes -- a dict of attributes to add to event
         all_args -- whether to auto-add all the function's arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
-        span -- the variable name of the span instance to add event to (defaults to current span)
+        span_var_name -- the variable name of the span instance to add event to (defaults to current span)
 
     Raises a `RuntimeError` if no current span is recording.
     """
@@ -46,8 +46,8 @@ def evented(
             func_inspect = FunctionInspection(func, args, kwargs)
             _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
 
-            if span:
-                _span = func_inspect.rget(span, Span)
+            if span_var_name:
+                _span = func_inspect.rget(span_var_name, Span)
             else:
                 if not get_current_span().is_recording():
                     raise RuntimeError("There is no currently recording span context.")

@@ -5,7 +5,7 @@ import asyncio
 import inspect
 from enum import Enum, auto
 from functools import wraps
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, cast
 
 from opentelemetry import trace
 from opentelemetry.propagate import extract
@@ -79,7 +79,7 @@ def spanned(
     """
     # TODO - what is `is_remote`?
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
-        def setup(args: Args, kwargs: Kwargs) -> Tuple[trace.Tracer, str, Kwargs]:
+        def setup(args: Args, kwargs: Kwargs) -> Span:
             span_name = name if name else func.__qualname__  # Ex: MyClass.method
             tracer_name = inspect.getfile(func)  # Ex: /path/to/source_file.py
 
@@ -98,28 +98,23 @@ def spanned(
             _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
             _links = _wrangle_links(func_inspect, links)
 
+            tracer = trace.get_tracer(tracer_name)
+            span = tracer.start_span(
+                span_name, context=context, kind=kind, attributes=_attrs, links=_links
+            )
+
             LOGGER.info(
                 f"Started span `{span_name}` for tracer `{tracer_name}` with: "
                 f"attributes={list(_attrs.keys()) if _attrs else []}, "
                 f"links={[k.context for k in _links]}"
             )
 
-            return (
-                trace.get_tracer(tracer_name),
-                span_name,
-                {
-                    "context": context,
-                    "kind": kind,
-                    "attributes": _attrs,
-                    "links": _links,
-                },
-            )
+            return span
 
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Function")
-            tracer, span_name, setup_kwargs = setup(args, kwargs)
-            span = tracer.start_span(span_name, **setup_kwargs)
+            span = setup(args, kwargs)
 
             if behavior.INDEPENDENT_SPAN:
                 kwargs["span"] = span
@@ -136,40 +131,107 @@ def spanned(
         @wraps(func)
         def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Generator Function")
-            tracer, span_name, setup_kwargs = setup(args, kwargs)
+            span = setup(args, kwargs)
 
-            if behavior == SpanBehavior.INDEPENDENT_SPAN:
-                kwargs["span"] = tracer.start_span(span_name, **setup_kwargs)
-
-            else:
-                with tracer.start_as_current_span(span_name, **setup_kwargs):
-                    for val in func(*args, **kwargs):
-                        yield val
-
-            if behavior == SpanBehavior.AUTO_CURRENT_SPAN:
-                with tracer.start_as_current_span(span_name, **setup_kwargs):
-                    for val in func(*args, **kwargs):
-                        yield val
-            elif behavior == SpanBehavior.INDEPENDENT_SPAN:
-                kwargs["span"] = tracer.start_span(span_name, **setup_kwargs)
-                for val in func(*args, **kwargs):
-                    yield val
-            else:
-                raise InvalidSpanBehaviorValue(behavior)
+            # TODO
 
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Async Function")
-            tracer, span_name, setup_kwargs = setup(args, kwargs)
+            span = setup(args, kwargs)
 
-            if behavior == SpanBehavior.AUTO_CURRENT_SPAN:
-                with tracer.start_as_current_span(span_name, **setup_kwargs):
-                    return await func(*args, **kwargs)
-            elif behavior == SpanBehavior.INDEPENDENT_SPAN:
-                kwargs["span"] = tracer.start_span(span_name, **setup_kwargs)
-                return await func(*args, **kwargs)
+            # TODO
+
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper
+        else:
+            if inspect.isgeneratorfunction(func):
+                return gen_wrapper
+            else:
+                return wrapper
+
+    return inner_function
+
+
+def respanned(
+    span_var_name: str,
+    attributes: types.Attributes = None,
+    all_args: bool = False,
+    these: Optional[List[str]] = None,
+    behavior: SpanBehavior = SpanBehavior.CURRENT_END_ON_EXIT,
+) -> Callable[..., Any]:
+    """Decorate to trace a function with an existing span.
+
+    Wraps a `use_span()` context.
+
+    Arguments:
+        span_var_name -- name of span variable
+
+    Keyword Arguments:
+        attributes -- a dict of attributes to add to span
+        all_args -- whether to auto-add all the function-arguments as attributes
+        these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
+        behavior -- TODO indicate what type of span behavior is wanted:
+                    - `SpanBehavior.AUTO_CURRENT_SPAN`
+                        + start span as the current span (accessible via `get_current_span()`)
+                        + automatically exit after function returns
+                        + default value
+                    - `SpanBehavior.INDEPENDENT_SPAN`
+                        + start span NOT as the current span
+                        + injects span instance into the function/method's argument list as `span`
+                        + requires a call to `span.end()` to send traces
+                        + can be persisted between independent functions
+
+    Raises a `InvalidSpanBehaviorValue` when an invalid `behavior` value is attempted
+    """
+    # TODO - what is `is_remote`?
+    def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
+        def setup(args: Args, kwargs: Kwargs) -> Span:
+            func_inspect = FunctionInspection(func, args, kwargs)
+            span = cast(Span, func_inspect.rget(span_var_name, Span))
+
+            _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
+            if _attrs:
+                for key, value in _attrs.items():
+                    span.set_attribute(key, value)  # TODO - check for duplicates
+
+            LOGGER.info(
+                f"Re-using span `{span.name}` (from '{span_var_name}') with: "
+                f"additional attributes={list(_attrs.keys()) if _attrs else []}"
+            )
+
+            return span
+
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            LOGGER.debug("Re-Spanned Function")
+            span = setup(args, kwargs)
+
+            if behavior.INDEPENDENT_SPAN:
+                kwargs["span"] = span
+                return func(*args, **kwargs)
+            elif SpanBehavior.CURRENT_END_ON_EXIT:
+                with trace.use_span(span, end_on_exit=True):
+                    return func(*args, **kwargs)
+            elif SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT:
+                with trace.use_span(span, end_on_exit=False):
+                    return func(*args, **kwargs)
             else:
                 raise InvalidSpanBehaviorValue(behavior)
+
+        @wraps(func)
+        def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+            LOGGER.debug("Re-Spanned Generator Function")
+            span = setup(args, kwargs)
+
+            # TODO
+
+        @wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            LOGGER.debug("Re-Spanned Async Function")
+            span = setup(args, kwargs)
+
+            # TODO
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
