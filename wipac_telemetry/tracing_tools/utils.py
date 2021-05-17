@@ -127,7 +127,7 @@ class FunctionInspector:
 
         return out
 
-    def wrangle_span_attributes(
+    def wrangle_otel_attributes(
         self,
         all_args: bool,
         these: Optional[List[str]],

@@ -87,15 +87,15 @@ def spanned(
                     "Cannot self-link the independent/injected span: `span`"
                 )
 
-            func_inspect = FunctionInspector(func, args, kwargs)
+            inspector = FunctionInspector(func, args, kwargs)
 
             if kind == SpanKind.SERVER:
-                context = extract(func_inspect.resolve_attr("self.request.headers"))
+                context = extract(inspector.resolve_attr("self.request.headers"))
             else:
                 context = None  # `None` will default to current context
 
-            _attrs = func_inspect.wrangle_span_attributes(all_args, these, attributes)
-            _links = func_inspect.get_links(links)
+            _attrs = inspector.wrangle_otel_attributes(all_args, these, attributes)
+            _links = inspector.get_links(links)
 
             tracer = trace.get_tracer(tracer_name)
             span = tracer.start_span(
@@ -186,10 +186,10 @@ def respanned(
     # TODO - what is `is_remote`?
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         def setup(args: Args, kwargs: Kwargs) -> Span:
-            func_inspect = FunctionInspector(func, args, kwargs)
-            span = func_inspect.get_span(span_var_name)
+            inspector = FunctionInspector(func, args, kwargs)
+            span = inspector.get_span(span_var_name)
 
-            _attrs = func_inspect.wrangle_span_attributes(all_args, these, attributes)
+            _attrs = inspector.wrangle_otel_attributes(all_args, these, attributes)
             if _attrs:
                 for key, value in _attrs.items():
                     span.set_attribute(key, value)  # TODO - check for duplicates

@@ -36,7 +36,7 @@ def evented(
         def setup(args: Args, kwargs: Kwargs) -> Tuple[Span, str, Kwargs]:
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
             func_inspect = FunctionInspector(func, args, kwargs)
-            _attrs = func_inspect.wrangle_span_attributes(all_args, these, attributes)
+            _attrs = func_inspect.wrangle_otel_attributes(all_args, these, attributes)
 
             if span_var_name:
                 _span = func_inspect.get_span(span_var_name)
