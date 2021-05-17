@@ -20,6 +20,7 @@ from .utils import (
     Span,
     SpanKind,
     convert_to_attributes,
+    get_current_span,
 )
 
 ########################################################################################
@@ -50,6 +51,8 @@ class _OTELAttributeSettings(TypedDict):
 
 
 class _SpanConductor:
+    """Conduct necessary processes for Span-availability."""
+
     def __init__(self, otel_attrs_settings: _OTELAttributeSettings):
         self.otel_attrs_settings = otel_attrs_settings
 
@@ -59,6 +62,8 @@ class _SpanConductor:
 
 
 class _NewSpanConductor(_SpanConductor):
+    """Conduct necessary processes for making a new Span available."""
+
     def __init__(
         self,
         otel_attrs_settings: _OTELAttributeSettings,
@@ -71,7 +76,7 @@ class _NewSpanConductor(_SpanConductor):
         self.name = name
         self.links = links
         self.kind = kind
-        self.is_independent = is_independent
+        self.is_independent = is_independent  # TODO - is this necessary?
 
     def get_span(self, inspector: FunctionInspector) -> Span:
         """Set up, start, and return a new span instance."""
@@ -112,15 +117,20 @@ class _NewSpanConductor(_SpanConductor):
 
 
 class _ReuseSpanConductor(_SpanConductor):
-    span_var_name: str
+    """Conduct necessary processes for reusing an existing Span."""
 
-    def __init__(self, otel_attrs_settings: _OTELAttributeSettings, span_var_name: str):
+    def __init__(
+        self, otel_attrs_settings: _OTELAttributeSettings, span_var_name: Optional[str]
+    ):
         super().__init__(otel_attrs_settings)
         self.span_var_name = span_var_name
 
     def get_span(self, inspector: FunctionInspector) -> Span:
         """Find, supplement, and return an exiting span instance."""
-        span = inspector.get_span(self.span_var_name)
+        if self.span_var_name:
+            span = inspector.get_span(self.span_var_name)
+        else:
+            span = get_current_span()
 
         attrs = inspector.wrangle_otel_attributes(
             self.otel_attrs_settings["all_args"],
@@ -142,17 +152,15 @@ class _ReuseSpanConductor(_SpanConductor):
 ########################################################################################
 
 
-def _spanned(
-    span_conductor: _SpanConductor, behavior: SpanBehavior,
-) -> Callable[..., Any]:
+def _spanned(conductor: _SpanConductor, behavior: SpanBehavior) -> Callable[..., Any]:
     """Handle decorating a function with either a new span or a reused span."""
 
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         def setup(args: Args, kwargs: Kwargs) -> Span:
-            if not isinstance(span_conductor, (_NewSpanConductor, _ReuseSpanConductor)):
-                raise Exception(f"Undefined SpanConductor type: {span_conductor}.")
+            if not isinstance(conductor, (_NewSpanConductor, _ReuseSpanConductor)):
+                raise Exception(f"Undefined SpanConductor type: {conductor}.")
             else:
-                return span_conductor.get_span(FunctionInspector(func, args, kwargs))
+                return conductor.get_span(FunctionInspector(func, args, kwargs))
 
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -233,20 +241,23 @@ def spanned(
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
-    Wraps a `tracer.start_as_current_span()` context.
-
     Keyword Arguments:
         name -- name of span; if not provided, use function's qualified name
         attributes -- a dict of attributes to add to span
         all_args -- whether to auto-add all the function-arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
-        behavior -- TODO indicate what type of span behavior is wanted:
-                    - `SpanBehavior.AUTO_CURRENT_SPAN`
+        behavior -- indicate what type of span behavior is wanted:
+                    - `SpanBehavior.CURRENT_END_ON_EXIT`
                         + start span as the current span (accessible via `get_current_span()`)
                         + automatically exit after function returns
                         + default value
+                    - `SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT`
+                        + start span as the current span (accessible via `get_current_span()`)
+                        + requires a call to `span.end()` to send traces
+                            - (or subsequent `@respanned()` with necessary `behavior` setting)
+                        + persists between independent functions as the globally accessible current span
                     - `SpanBehavior.INDEPENDENT_SPAN`
-                        + start span NOT as the current span
+                        + start span BUT NOT as the current span
                         + injects span instance into the function/method's argument list as `span`
                         + requires a call to `span.end()` to send traces
                         + can be persisted between independent functions
@@ -283,7 +294,7 @@ def spanned(
 
 
 def respanned(
-    span_var_name: str,
+    span_var_name: Optional[str] = None,
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
@@ -291,22 +302,23 @@ def respanned(
 ) -> Callable[..., Any]:
     """Decorate to trace a function with an existing span.
 
-    Wraps a `use_span()` context.
-
-    Arguments:
-        span_var_name -- name of span variable
-
     Keyword Arguments:
+        span_var_name -- name of span variable--if not given, defaults to current span
         attributes -- a dict of attributes to add to span
         all_args -- whether to auto-add all the function-arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
-        behavior -- TODO indicate what type of span behavior is wanted:
-                    - `SpanBehavior.AUTO_CURRENT_SPAN`
+        behavior -- indicate what type of span behavior is wanted:
+                    - `SpanBehavior.CURRENT_END_ON_EXIT`
                         + start span as the current span (accessible via `get_current_span()`)
                         + automatically exit after function returns
                         + default value
+                    - `SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT`
+                        + start span as the current span (accessible via `get_current_span()`)
+                        + requires a call to `span.end()` to send traces
+                            - (or subsequent `@respanned()` with necessary `behavior` setting)
+                        + persists between independent functions as the globally accessible current span
                     - `SpanBehavior.INDEPENDENT_SPAN`
-                        + start span NOT as the current span
+                        + start span BUT NOT as the current span
                         + injects span instance into the function/method's argument list as `span`
                         + requires a call to `span.end()` to send traces
                         + can be persisted between independent functions
