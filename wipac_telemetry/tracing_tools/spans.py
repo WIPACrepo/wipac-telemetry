@@ -27,7 +27,8 @@ from .utils import (
 class SpanBehavior(Enum):
     """Enum for indicating type of span behavior is wanted."""
 
-    AUTO_CURRENT_SPAN = auto()
+    CURRENT_END_ON_EXIT = auto()
+    CURRENT_LEAVE_OPEN_ON_EXIT = auto()
     INDEPENDENT_SPAN = auto()
 
 
@@ -40,7 +41,7 @@ def spanned(
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
-    behavior: SpanBehavior = SpanBehavior.AUTO_CURRENT_SPAN,
+    behavior: SpanBehavior = SpanBehavior.CURRENT_END_ON_EXIT,
     links: Optional[List[str]] = None,
     kind: SpanKind = SpanKind.INTERNAL,
 ) -> Callable[..., Any]:
@@ -53,7 +54,7 @@ def spanned(
         attributes -- a dict of attributes to add to span
         all_args -- whether to auto-add all the function-arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
-        behavior -- indicate what type of span behavior is wanted:
+        behavior -- TODO indicate what type of span behavior is wanted:
                     - `SpanBehavior.AUTO_CURRENT_SPAN`
                         + start span as the current span (accessible via `get_current_span()`)
                         + automatically exit after function returns
@@ -118,13 +119,17 @@ def spanned(
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Function")
             tracer, span_name, setup_kwargs = setup(args, kwargs)
+            span = tracer.start_span(span_name, **setup_kwargs)
 
-            if behavior == SpanBehavior.AUTO_CURRENT_SPAN:
-                with tracer.start_as_current_span(span_name, **setup_kwargs):
-                    return func(*args, **kwargs)
-            elif behavior == SpanBehavior.INDEPENDENT_SPAN:
-                kwargs["span"] = tracer.start_span(span_name, **setup_kwargs)
+            if behavior.INDEPENDENT_SPAN:
+                kwargs["span"] = span
                 return func(*args, **kwargs)
+            elif SpanBehavior.CURRENT_END_ON_EXIT:
+                with trace.use_span(span, end_on_exit=True):
+                    return func(*args, **kwargs)
+            elif SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT:
+                with trace.use_span(span, end_on_exit=False):
+                    return func(*args, **kwargs)
             else:
                 raise InvalidSpanBehaviorValue(behavior)
 
