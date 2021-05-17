@@ -49,81 +49,91 @@ class _OTELAttributeSettings(TypedDict):
 ########################################################################################
 
 
-class _NewSpanSettings(TypedDict):
-    name: str
-    links: List[str]
-    kind: SpanKind
-
-
-class _ReuseSpanSettings(TypedDict):
-    span_var_name: str
-
-
-########################################################################################
-
-
 class _SpanConductor:
+    def __init__(self, otel_attrs_settings: _OTELAttributeSettings):
+        self.otel_attrs_settings = otel_attrs_settings
+
+    def get_span(self, inspector: FunctionInspector) -> Span:
+        """Get a span, configure according to sub-class."""
+        raise NotImplementedError()
+
+
+class _NewSpanConductor(_SpanConductor):
     def __init__(
         self,
-        func: Callable[..., Any],
         otel_attrs_settings: _OTELAttributeSettings,
-        args: Args,
-        kwargs: Kwargs,
+        name: str,
+        links: List[str],
+        kind: SpanKind,
+        is_independent: bool,
     ):
-        self.inspector = FunctionInspector(func, args, kwargs)
-        self.otel_attributes = self.inspector.wrangle_otel_attributes(
-            otel_attrs_settings["all_args"],
-            otel_attrs_settings["these"],
-            otel_attrs_settings["attributes"],
-        )
+        super().__init__(otel_attrs_settings)
+        self.name = name
+        self.links = links
+        self.kind = kind
+        self.is_independent = is_independent
 
-    def new_span(self, settings: _NewSpanSettings, is_independent: bool) -> Span:
+    def get_span(self, inspector: FunctionInspector) -> Span:
         """Set up, start, and return a new span instance."""
-        if settings["name"]:
-            span_name = settings["name"]
+        if self.name:
+            span_name = self.name
         else:
-            span_name = self.inspector.func.__qualname__  # Ex: MyClass.method
+            span_name = inspector.func.__qualname__  # Ex: MyClass.method
 
-        tracer_name = inspect.getfile(self.inspector.func)  # Ex: /path/to/file.py
+        tracer_name = inspect.getfile(inspector.func)  # Ex: /path/to/file.py
 
-        if is_independent and "span" in settings["links"]:  # TODO - is this necessary?
+        if self.is_independent and "span" in self.links:  # TODO - is this necessary?
             raise ValueError("Cannot self-link the independent/injected span: `span`")
 
-        if settings["kind"] == SpanKind.SERVER:
-            context = extract(self.inspector.resolve_attr("self.request.headers"))
+        if self.kind == SpanKind.SERVER:
+            context = extract(inspector.resolve_attr("self.request.headers"))
         else:
             context = None  # `None` will default to current context
 
-        _links = self.inspector.get_links(settings["links"])
+        _links = inspector.get_links(self.links)
+        attrs = inspector.wrangle_otel_attributes(
+            self.otel_attrs_settings["all_args"],
+            self.otel_attrs_settings["these"],
+            self.otel_attrs_settings["attributes"],
+        )
 
         tracer = trace.get_tracer(tracer_name)
         span = tracer.start_span(
-            span_name,
-            context=context,
-            kind=settings["kind"],
-            attributes=self.otel_attributes,
-            links=_links,
+            span_name, context=context, kind=self.kind, attributes=attrs, links=_links,
         )
 
         LOGGER.info(
             f"Started span `{span_name}` for tracer `{tracer_name}` with: "
-            f"attributes={list(self.otel_attributes.keys()) if self.otel_attributes else []}, "
+            f"attributes={list(attrs.keys()) if attrs else []}, "
             f"links={[k.context for k in _links]}"
         )
 
         return span
 
-    def reuse_span(self, settings: _ReuseSpanSettings) -> Span:
-        """Find, supplement, and return an exiting span instance."""
-        span = self.inspector.get_span(settings["span_var_name"])
 
-        if self.otel_attributes:
-            for key, value in self.otel_attributes.items():
+class _ReuseSpanConductor(_SpanConductor):
+    span_var_name: str
+
+    def __init__(self, otel_attrs_settings: _OTELAttributeSettings, span_var_name: str):
+        super().__init__(otel_attrs_settings)
+        self.span_var_name = span_var_name
+
+    def get_span(self, inspector: FunctionInspector) -> Span:
+        """Find, supplement, and return an exiting span instance."""
+        span = inspector.get_span(self.span_var_name)
+
+        attrs = inspector.wrangle_otel_attributes(
+            self.otel_attrs_settings["all_args"],
+            self.otel_attrs_settings["these"],
+            self.otel_attrs_settings["attributes"],
+        )
+        if attrs:
+            for key, value in attrs.items():
                 span.set_attribute(key, value)  # TODO - check for duplicates
 
         LOGGER.info(
-            f"Re-using span `{span.name}` (from '{settings['span_var_name']}') with: "
-            f"additional attributes={list(self.otel_attributes.keys()) if self.otel_attributes else []}"
+            f"Re-using span `{span.name}` (from '{self.span_var_name}') with: "
+            f"additional attributes={list(attrs.keys()) if attrs else []}"
         )
 
         return span
@@ -133,23 +143,16 @@ class _SpanConductor:
 
 
 def _spanned(
-    otel_attrs_settings: _OTELAttributeSettings,
-    new_span_settings: Optional[_NewSpanSettings],
-    reuse_span_settings: Optional[_ReuseSpanSettings],
-    behavior: SpanBehavior,
+    span_conductor: _SpanConductor, behavior: SpanBehavior,
 ) -> Callable[..., Any]:
     """Handle decorating a function with either a new span or a reused span."""
 
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         def setup(args: Args, kwargs: Kwargs) -> Span:
-            setup = _SpanConductor(func, otel_attrs_settings, args, kwargs)
-            if new_span_settings:
-                is_independent = behavior == SpanBehavior.INDEPENDENT_SPAN
-                return setup.new_span(new_span_settings, is_independent)
-            elif reuse_span_settings:
-                return setup.reuse_span(reuse_span_settings)
+            if not isinstance(span_conductor, (_NewSpanConductor, _ReuseSpanConductor)):
+                raise Exception(f"Undefined SpanConductor type: {span_conductor}.")
             else:
-                raise Exception("Undefined spanning setup.")
+                return span_conductor.get_span(FunctionInspector(func, args, kwargs))
 
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -268,9 +271,13 @@ def spanned(
         links = []
 
     return _spanned(
-        {"attributes": attributes, "all_args": all_args, "these": these},
-        {"name": name, "links": links, "kind": kind},
-        None,
+        _NewSpanConductor(
+            {"attributes": attributes, "all_args": all_args, "these": these},
+            name,
+            links,
+            kind,
+            behavior == SpanBehavior.INDEPENDENT_SPAN,
+        ),
         behavior,
     )
 
@@ -310,9 +317,10 @@ def respanned(
         these = []
 
     return _spanned(
-        {"attributes": attributes, "all_args": all_args, "these": these},
-        None,
-        {"span_var_name": span_var_name},
+        _ReuseSpanConductor(
+            {"attributes": attributes, "all_args": all_args, "these": these},
+            span_var_name,
+        ),
         behavior,
     )
 
