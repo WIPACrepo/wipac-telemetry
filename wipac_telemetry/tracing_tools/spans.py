@@ -156,13 +156,13 @@ def _spanned(
             LOGGER.debug("Spanned Function")
             span = setup(args, kwargs)
 
-            if behavior.INDEPENDENT_SPAN:
+            if behavior == SpanBehavior.INDEPENDENT_SPAN:
                 kwargs["span"] = span
                 return func(*args, **kwargs)
-            elif SpanBehavior.CURRENT_END_ON_EXIT:
+            elif behavior == SpanBehavior.CURRENT_END_ON_EXIT:
                 with trace.use_span(span, end_on_exit=True):
                     return func(*args, **kwargs)
-            elif SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT:
+            elif behavior == SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT:
                 with trace.use_span(span, end_on_exit=False):
                     return func(*args, **kwargs)
             else:
@@ -173,14 +173,37 @@ def _spanned(
             LOGGER.debug("Spanned Generator Function")
             span = setup(args, kwargs)
 
-            # TODO
+            if behavior == SpanBehavior.INDEPENDENT_SPAN:
+                kwargs["span"] = span
+                for val in func(*args, **kwargs):
+                    yield val
+            elif behavior == SpanBehavior.CURRENT_END_ON_EXIT:
+                with trace.use_span(span, end_on_exit=True):
+                    for val in func(*args, **kwargs):
+                        yield val
+            elif behavior == SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT:
+                with trace.use_span(span, end_on_exit=False):
+                    for val in func(*args, **kwargs):
+                        yield val
+            else:
+                raise InvalidSpanBehaviorValue(behavior)
 
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Async Function")
             span = setup(args, kwargs)
 
-            # TODO
+            if behavior == SpanBehavior.INDEPENDENT_SPAN:
+                kwargs["span"] = span
+                return await func(*args, **kwargs)
+            elif behavior == SpanBehavior.CURRENT_END_ON_EXIT:
+                with trace.use_span(span, end_on_exit=True):
+                    return await func(*args, **kwargs)
+            elif behavior == SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT:
+                with trace.use_span(span, end_on_exit=False):
+                    return await func(*args, **kwargs)
+            else:
+                raise InvalidSpanBehaviorValue(behavior)
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
@@ -295,6 +318,8 @@ def respanned(
 
 
 ########################################################################################
+
+# TODO - figure out what to do with linking
 
 
 def make_link(
