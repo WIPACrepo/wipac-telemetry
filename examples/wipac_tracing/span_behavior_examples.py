@@ -31,6 +31,21 @@ class DemoClass:
         self.span.add_event("(method) started span from instance method")
         time.sleep(3)
 
+        @wtt.respanned(None, wtt.SpanBehavior.END_ON_EXIT)
+        def legal_but_will_log_warnings() -> None:
+            pass
+
+        @wtt.respanned(None, wtt.SpanBehavior.ONLY_END_ON_EXCEPTION)
+        def legal_and_rare() -> None:
+            pass
+
+        @wtt.respanned(None, wtt.SpanBehavior.DONT_END)
+        def legal_and_fine() -> None:
+            pass
+
+        legal_and_rare()
+        legal_and_fine()
+
     @wtt.respanned(
         "self.span", wtt.SpanBehavior.ONLY_END_ON_EXCEPTION, attributes={"a": 2}
     )

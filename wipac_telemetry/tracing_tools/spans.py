@@ -34,8 +34,8 @@ class SpanBehavior(Enum):
     ONLY_END_ON_EXCEPTION = auto()
 
 
-class InvalidSpanBehaviorValue(ValueError):
-    """Raise when an invalid SpanBehvior value is attempted."""
+class InvalidSpanBehavior(ValueError):
+    """Raise when an invalid SpanBehavior value is attempted."""
 
 
 ########################################################################################
@@ -176,7 +176,7 @@ def _spanned(conductor: _SpanConductor, behavior: SpanBehavior) -> Callable[...,
                 with trace.use_span(span, end_on_exit=False):
                     return func(*args, **kwargs)
             else:
-                raise InvalidSpanBehaviorValue(behavior)
+                raise InvalidSpanBehavior(behavior)
 
         @wraps(func)
         def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -200,7 +200,7 @@ def _spanned(conductor: _SpanConductor, behavior: SpanBehavior) -> Callable[...,
                     for val in func(*args, **kwargs):
                         yield val
             else:
-                raise InvalidSpanBehaviorValue(behavior)
+                raise InvalidSpanBehavior(behavior)
 
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -221,7 +221,7 @@ def _spanned(conductor: _SpanConductor, behavior: SpanBehavior) -> Callable[...,
                 with trace.use_span(span, end_on_exit=False):
                     return await func(*args, **kwargs)
             else:
-                raise InvalidSpanBehaviorValue(behavior)
+                raise InvalidSpanBehavior(behavior)
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
@@ -279,7 +279,7 @@ def spanned(
                 - `SpanKind.PRODUCER` - spanned function handles incoming cross-service messages
 
     Raises a `ValueError` when attempting to self-link the independent/injected span
-    Raises a `InvalidSpanBehaviorValue` when an invalid `behavior` value is attempted
+    Raises a `InvalidSpanBehavior` when an invalid `behavior` value is attempted
     """
     if not these:
         these = []
@@ -309,7 +309,7 @@ def respanned(
     """Decorate to trace a function with an existing span.
 
     Arguments:
-        span_var_name -- name of Span instance variable
+        span_var_name -- name of Span instance variable; if None (or ""), the current-span is used
         behavior -- indicate what type of span behavior is wanted:
                     - `SpanBehavior.END_ON_EXIT`
                         + start span as the current span (accessible via `get_current_span()`)
@@ -331,7 +331,7 @@ def respanned(
         all_args -- whether to auto-add all the function-arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
 
-    Raises a `InvalidSpanBehaviorValue` when an invalid `behavior` value is attempted
+    Raises an `InvalidSpanBehavior` when an invalid `behavior` value is attempted
     """
     if not these:
         these = []
