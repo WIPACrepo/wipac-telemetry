@@ -16,7 +16,7 @@ from . import propagations  # noqa
 from .config import CONFIG
 from .events import evented  # noqa
 from .spans import SpanBehavior, make_link, respanned, spanned  # noqa
-from .utils import Link, OptSpan, Span, SpanKind, get_current_span  # noqa
+from .utils import Link, Span, SpanKind, get_current_span  # noqa
 
 __all__ = [
     "propagations",
@@ -25,7 +25,6 @@ __all__ = [
     "spanned",
     "respanned",
     "Link",
-    "OptSpan",
     "Span",
     "SpanKind",
     "get_current_span",

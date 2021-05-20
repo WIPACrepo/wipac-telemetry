@@ -24,7 +24,6 @@ Kwargs = Dict[str, Any]
 
 # aliases for easy importing
 Span = trace.Span
-OptSpan = Optional[Span]  # alias used for Span-argument injection
 Link = trace.Link
 get_current_span = trace.get_current_span
 SpanKind = trace.SpanKind
@@ -121,7 +120,7 @@ class FunctionInspector:
             except TypeError as e:
                 LOGGER.warning(
                     e
-                )  # this var_name could be a None value (aka an OptSpan)
+                )  # this var_name could be a None value (aka an Optional[Span])
             else:
                 out.append(link)
 

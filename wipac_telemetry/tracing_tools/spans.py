@@ -300,7 +300,7 @@ def spanned(
 
 
 def respanned(
-    span_var_name: str,
+    span_var_name: Optional[str],
     behavior: SpanBehavior,
     attributes: types.Attributes = None,
     all_args: bool = False,

@@ -21,7 +21,7 @@ class DemoClass:
     """Handle methods using a Span instance as a instance variable."""
 
     def __init__(self) -> None:
-        self.span: wtt.OptSpan = None
+        self.span: Optional[wtt.Span] = None
 
     @wtt.spanned(behavior=wtt.SpanBehavior.ONLY_END_ON_EXCEPTION)
     def prepare(self) -> None:
