@@ -5,6 +5,7 @@ import os
 import random
 import sys
 import time
+from typing import Optional
 
 import coloredlogs  # type: ignore[import]
 
@@ -31,20 +32,23 @@ class DemoClass:
         self.span.add_event("(method) started span from instance method")
         time.sleep(3)
 
-        @wtt.respanned(None, wtt.SpanBehavior.END_ON_EXIT)
-        def legal_but_will_log_warnings() -> None:
+        @wtt.respanned(None, wtt.SpanBehavior.END_ON_EXIT, all_args=True)
+        def legal_but_will_log_warnings(num: int) -> None:
+            # this would end the span before the caller does
             pass
 
-        @wtt.respanned(None, wtt.SpanBehavior.ONLY_END_ON_EXCEPTION)
-        def legal_and_rare() -> None:
+        @wtt.respanned(None, wtt.SpanBehavior.ONLY_END_ON_EXCEPTION, all_args=True)
+        def legal_and_rare(num: int) -> None:
+            # this could end the span, which may or may not be wanted
             pass
 
-        @wtt.respanned(None, wtt.SpanBehavior.DONT_END)
-        def legal_and_fine() -> None:
+        @wtt.respanned(None, wtt.SpanBehavior.DONT_END, all_args=True)
+        def legal_and_fine(num: int) -> None:
+            # this is okay, and a quick way to add to the span
             pass
 
-        legal_and_rare()
-        legal_and_fine()
+        legal_and_rare(11)
+        legal_and_fine(22)
 
     @wtt.respanned(
         "self.span", wtt.SpanBehavior.ONLY_END_ON_EXCEPTION, attributes={"a": 2}

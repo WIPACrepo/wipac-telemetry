@@ -5,7 +5,7 @@ import asyncio
 import inspect
 from enum import Enum, auto
 from functools import wraps
-from typing import Any, Callable, List, Optional, TypedDict
+from typing import Any, Callable, Final, List, Optional, TypedDict
 
 from opentelemetry import trace
 from opentelemetry.propagate import extract
@@ -53,12 +53,22 @@ class _OTELAttributeSettings(TypedDict):
 class _SpanConductor:
     """Conduct necessary processes for Span-availability."""
 
-    def __init__(self, otel_attrs_settings: _OTELAttributeSettings):
+    def __init__(
+        self, otel_attrs_settings: _OTELAttributeSettings, autoevent_reason: str
+    ):
         self.otel_attrs_settings = otel_attrs_settings
+        self._autoevent_reason_value: Final = autoevent_reason
 
     def get_span(self, inspector: FunctionInspector) -> Span:
         """Get a span, configure according to sub-class."""
         raise NotImplementedError()
+
+    def auto_event_attrs(self, span_attrs: types.Attributes) -> types.Attributes:
+        """Get the event attributes for auto-eventing a span."""
+        return {
+            "spanned_reason": self._autoevent_reason_value,
+            "added_attributes": list(span_attrs.keys()) if span_attrs else [],
+        }
 
 
 class _NewSpanConductor(_SpanConductor):
@@ -71,7 +81,7 @@ class _NewSpanConductor(_SpanConductor):
         links: List[str],
         kind: SpanKind,
     ):
-        super().__init__(otel_attrs_settings)
+        super().__init__(otel_attrs_settings, "premiere")
         self.name = name
         self.links = links
         self.kind = kind
@@ -101,6 +111,7 @@ class _NewSpanConductor(_SpanConductor):
         span = tracer.start_span(
             span_name, context=context, kind=self.kind, attributes=attrs, links=_links,
         )
+        span.add_event(span_name, self.auto_event_attrs(attrs))
 
         LOGGER.info(
             f"Started span `{span_name}` for tracer `{tracer_name}` with: "
@@ -117,7 +128,7 @@ class _ReuseSpanConductor(_SpanConductor):
     def __init__(
         self, otel_attrs_settings: _OTELAttributeSettings, span_var_name: Optional[str]
     ):
-        super().__init__(otel_attrs_settings)
+        super().__init__(otel_attrs_settings, "respanned")
         self.span_var_name = span_var_name
 
     def get_span(self, inspector: FunctionInspector) -> Span:
@@ -132,13 +143,16 @@ class _ReuseSpanConductor(_SpanConductor):
             self.otel_attrs_settings["these"],
             self.otel_attrs_settings["attributes"],
         )
-        if attrs:
+        if attrs:  # this may override existing attributes
             for key, value in attrs.items():
-                span.set_attribute(key, value)  # TODO - check for duplicates
+                span.set_attribute(key, value)
+
+        span.add_event(inspector.func.__qualname__, self.auto_event_attrs(attrs))
 
         LOGGER.info(
-            f"Re-using span `{span.name}` (from '{self.span_var_name}') with: "
-            f"additional attributes={list(attrs.keys()) if attrs else []}"
+            f"Re-using span `{span.name}` "
+            f"(from '{self.span_var_name if self.span_var_name else 'current-span'}') "
+            f"with: additional attributes={list(attrs.keys()) if attrs else []}"
         )
 
         return span
@@ -248,6 +262,9 @@ def spanned(
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
+    Also, record an event with the function's name and the names of the
+    attributes added.
+
     Keyword Arguments:
         name -- name of span; if not provided, use function's qualified name
         attributes -- a dict of attributes to add to span
@@ -308,6 +325,9 @@ def respanned(
 ) -> Callable[..., Any]:
     """Decorate to trace a function with an existing span.
 
+    Also, record an event with the function's name and the names of the
+    attributes added.
+
     Arguments:
         span_var_name -- name of Span instance variable; if None (or ""), the current-span is used
         behavior -- indicate what type of span behavior is wanted:
@@ -321,7 +341,7 @@ def respanned(
                             - (or subsequent `@respanned()` with necessary `behavior` setting)
                         + can be persisted between independent functions
                         + use this when re-use is needed and an exception IS expected
-                        + traces are sent if the function call is wrapped in a try-except
+                        + (traces are sent if the function call is wrapped in a try-except)
                     - `SpanBehavior.ONLY_END_ON_EXCEPTION`
                         + similar to `SpanBehavior.DONT_END` but auto-ends when an exception is raised
                         + use this when re-use is needed and an exception is NOT expected
