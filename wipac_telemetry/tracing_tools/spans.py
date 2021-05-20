@@ -29,9 +29,9 @@ from .utils import (
 class SpanBehavior(Enum):
     """Enum for indicating type of span behavior is wanted."""
 
-    CURRENT_END_ON_EXIT = auto()
-    CURRENT_LEAVE_OPEN_ON_EXIT = auto()
-    INDEPENDENT_SPAN = auto()
+    END_ON_EXIT = auto()
+    DONT_END = auto()
+    ONLY_END_ON_EXCEPTION = auto()
 
 
 class InvalidSpanBehaviorValue(ValueError):
@@ -70,13 +70,11 @@ class _NewSpanConductor(_SpanConductor):
         name: str,
         links: List[str],
         kind: SpanKind,
-        is_independent: bool,
     ):
         super().__init__(otel_attrs_settings)
         self.name = name
         self.links = links
         self.kind = kind
-        self.is_independent = is_independent  # TODO - is this necessary?
 
     def get_span(self, inspector: FunctionInspector) -> Span:
         """Set up, start, and return a new span instance."""
@@ -86,9 +84,6 @@ class _NewSpanConductor(_SpanConductor):
             span_name = inspector.func.__qualname__  # Ex: MyClass.method
 
         tracer_name = inspect.getfile(inspector.func)  # Ex: /path/to/file.py
-
-        if self.is_independent and "span" in self.links:  # TODO - is this necessary?
-            raise ValueError("Cannot self-link the independent/injected span: `span`")
 
         if self.kind == SpanKind.SERVER:
             context = extract(inspector.resolve_attr("self.request.headers"))
@@ -167,13 +162,17 @@ def _spanned(conductor: _SpanConductor, behavior: SpanBehavior) -> Callable[...,
             LOGGER.debug("Spanned Function")
             span = setup(args, kwargs)
 
-            if behavior == SpanBehavior.INDEPENDENT_SPAN:
-                kwargs["span"] = span
-                return func(*args, **kwargs)
-            elif behavior == SpanBehavior.CURRENT_END_ON_EXIT:
+            if behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
+                try:
+                    with trace.use_span(span, end_on_exit=False):
+                        return func(*args, **kwargs)
+                except:  # noqa: E722 # pylint: disable=bare-except
+                    span.end()
+                    raise
+            elif behavior == SpanBehavior.END_ON_EXIT:
                 with trace.use_span(span, end_on_exit=True):
                     return func(*args, **kwargs)
-            elif behavior == SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT:
+            elif behavior == SpanBehavior.DONT_END:
                 with trace.use_span(span, end_on_exit=False):
                     return func(*args, **kwargs)
             else:
@@ -184,15 +183,19 @@ def _spanned(conductor: _SpanConductor, behavior: SpanBehavior) -> Callable[...,
             LOGGER.debug("Spanned Generator Function")
             span = setup(args, kwargs)
 
-            if behavior == SpanBehavior.INDEPENDENT_SPAN:
-                kwargs["span"] = span
-                for val in func(*args, **kwargs):
-                    yield val
-            elif behavior == SpanBehavior.CURRENT_END_ON_EXIT:
+            if behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
+                try:
+                    with trace.use_span(span, end_on_exit=False):
+                        for val in func(*args, **kwargs):
+                            yield val
+                except:  # noqa: E722 # pylint: disable=bare-except
+                    span.end()
+                    raise
+            elif behavior == SpanBehavior.END_ON_EXIT:
                 with trace.use_span(span, end_on_exit=True):
                     for val in func(*args, **kwargs):
                         yield val
-            elif behavior == SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT:
+            elif behavior == SpanBehavior.DONT_END:
                 with trace.use_span(span, end_on_exit=False):
                     for val in func(*args, **kwargs):
                         yield val
@@ -204,13 +207,17 @@ def _spanned(conductor: _SpanConductor, behavior: SpanBehavior) -> Callable[...,
             LOGGER.debug("Spanned Async Function")
             span = setup(args, kwargs)
 
-            if behavior == SpanBehavior.INDEPENDENT_SPAN:
-                kwargs["span"] = span
-                return await func(*args, **kwargs)
-            elif behavior == SpanBehavior.CURRENT_END_ON_EXIT:
+            if behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
+                try:
+                    with trace.use_span(span, end_on_exit=False):
+                        return await func(*args, **kwargs)
+                except:  # noqa: E722 # pylint: disable=bare-except
+                    span.end()
+                    raise
+            elif behavior == SpanBehavior.END_ON_EXIT:
                 with trace.use_span(span, end_on_exit=True):
                     return await func(*args, **kwargs)
-            elif behavior == SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT:
+            elif behavior == SpanBehavior.DONT_END:
                 with trace.use_span(span, end_on_exit=False):
                     return await func(*args, **kwargs)
             else:
@@ -235,7 +242,7 @@ def spanned(
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
-    behavior: SpanBehavior = SpanBehavior.CURRENT_END_ON_EXIT,
+    behavior: SpanBehavior = SpanBehavior.END_ON_EXIT,
     links: Optional[List[str]] = None,
     kind: SpanKind = SpanKind.INTERNAL,
 ) -> Callable[..., Any]:
@@ -247,20 +254,20 @@ def spanned(
         all_args -- whether to auto-add all the function-arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
         behavior -- indicate what type of span behavior is wanted:
-                    - `SpanBehavior.CURRENT_END_ON_EXIT`
+                    - `SpanBehavior.END_ON_EXIT`
                         + start span as the current span (accessible via `get_current_span()`)
-                        + automatically exit after function returns
+                        + automatically end span (send traces) when function returns
                         + default value
-                    - `SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT`
+                    - `SpanBehavior.DONT_END`
                         + start span as the current span (accessible via `get_current_span()`)
                         + requires a call to `span.end()` to send traces
                             - (or subsequent `@respanned()` with necessary `behavior` setting)
-                        + persists between independent functions as the globally accessible current span
-                    - `SpanBehavior.INDEPENDENT_SPAN`
-                        + start span BUT NOT as the current span
-                        + injects span instance into the function/method's argument list as `span`
-                        + requires a call to `span.end()` to send traces
                         + can be persisted between independent functions
+                        + use this when re-use is needed and an exception IS expected
+                        + traces are sent if the function call is wrapped in a try-except
+                    - `SpanBehavior.ONLY_END_ON_EXCEPTION`
+                        + similar to `SpanBehavior.DONT_END` but auto-ends when an exception is raised
+                        + use this when re-use is needed and an exception is NOT expected
         links -- a list of variable names of `Link` instances (span-links) - useful for cross-process tracing
         kind -- a `SpanKind` enum value
                 - ``SpanKind.INTERNAL` - (default) normal, in-application spans
@@ -287,41 +294,42 @@ def spanned(
             name,
             links,
             kind,
-            behavior == SpanBehavior.INDEPENDENT_SPAN,
         ),
         behavior,
     )
 
 
 def respanned(
-    span_var_name: Optional[str] = None,
+    span_var_name: str,
+    behavior: SpanBehavior,
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
-    behavior: SpanBehavior = SpanBehavior.CURRENT_END_ON_EXIT,
 ) -> Callable[..., Any]:
     """Decorate to trace a function with an existing span.
 
-    Keyword Arguments:
-        span_var_name -- name of span variable--if not given, defaults to current span
-        attributes -- a dict of attributes to add to span
-        all_args -- whether to auto-add all the function-arguments as attributes
-        these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
+    Arguments:
+        span_var_name -- name of Span instance variable
         behavior -- indicate what type of span behavior is wanted:
-                    - `SpanBehavior.CURRENT_END_ON_EXIT`
+                    - `SpanBehavior.END_ON_EXIT`
                         + start span as the current span (accessible via `get_current_span()`)
-                        + automatically exit after function returns
+                        + automatically end span (send traces) when function returns
                         + default value
-                    - `SpanBehavior.CURRENT_LEAVE_OPEN_ON_EXIT`
+                    - `SpanBehavior.DONT_END`
                         + start span as the current span (accessible via `get_current_span()`)
                         + requires a call to `span.end()` to send traces
                             - (or subsequent `@respanned()` with necessary `behavior` setting)
-                        + persists between independent functions as the globally accessible current span
-                    - `SpanBehavior.INDEPENDENT_SPAN`
-                        + start span BUT NOT as the current span
-                        + injects span instance into the function/method's argument list as `span`
-                        + requires a call to `span.end()` to send traces
                         + can be persisted between independent functions
+                        + use this when re-use is needed and an exception IS expected
+                        + traces are sent if the function call is wrapped in a try-except
+                    - `SpanBehavior.ONLY_END_ON_EXCEPTION`
+                        + similar to `SpanBehavior.DONT_END` but auto-ends when an exception is raised
+                        + use this when re-use is needed and an exception is NOT expected
+
+    Keyword Arguments:
+        attributes -- a dict of attributes to add to span
+        all_args -- whether to auto-add all the function-arguments as attributes
+        these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
 
     Raises a `InvalidSpanBehaviorValue` when an invalid `behavior` value is attempted
     """
