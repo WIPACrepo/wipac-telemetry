@@ -54,9 +54,13 @@ class _SpanConductor:
     """Conduct necessary processes for Span-availability."""
 
     def __init__(
-        self, otel_attrs_settings: _OTELAttributeSettings, autoevent_reason: str
+        self,
+        otel_attrs_settings: _OTELAttributeSettings,
+        behavior: SpanBehavior,
+        autoevent_reason: str,
     ):
         self.otel_attrs_settings = otel_attrs_settings
+        self.behavior = behavior
         self._autoevent_reason_value: Final = autoevent_reason
 
     def get_span(self, inspector: FunctionInspector) -> Span:
@@ -67,6 +71,7 @@ class _SpanConductor:
         """Get the event attributes for auto-eventing a span."""
         return {
             "spanned_reason": self._autoevent_reason_value,
+            "span_behavior": str(self.behavior),
             "added_attributes": list(span_attrs.keys()) if span_attrs else [],
         }
 
@@ -77,11 +82,12 @@ class _NewSpanConductor(_SpanConductor):
     def __init__(
         self,
         otel_attrs_settings: _OTELAttributeSettings,
+        behavior: SpanBehavior,
         name: str,
         links: List[str],
         kind: SpanKind,
     ):
-        super().__init__(otel_attrs_settings, "premiere")
+        super().__init__(otel_attrs_settings, behavior, "premiere")
         self.name = name
         self.links = links
         self.kind = kind
@@ -126,9 +132,12 @@ class _ReuseSpanConductor(_SpanConductor):
     """Conduct necessary processes for reusing an existing Span."""
 
     def __init__(
-        self, otel_attrs_settings: _OTELAttributeSettings, span_var_name: Optional[str]
+        self,
+        otel_attrs_settings: _OTELAttributeSettings,
+        behavior: SpanBehavior,
+        span_var_name: Optional[str],
     ):
-        super().__init__(otel_attrs_settings, "respanned")
+        super().__init__(otel_attrs_settings, behavior, "respanned")
         self.span_var_name = span_var_name
 
     def get_span(self, inspector: FunctionInspector) -> Span:
@@ -149,6 +158,13 @@ class _ReuseSpanConductor(_SpanConductor):
 
         span.add_event(inspector.func.__qualname__, self.auto_event_attrs(attrs))
 
+        if self.behavior == SpanBehavior.END_ON_EXIT and span == get_current_span():
+            raise InvalidSpanBehavior(
+                "Attempting to re-span an already recording span "
+                "with `behavior=SpanBehavior.END_ON_EXIT` "
+                "(callee should not explicitly end caller's span)."
+            )
+
         LOGGER.info(
             f"Re-using span `{span.name}` "
             f"(from '{self.span_var_name if self.span_var_name else 'current-span'}') "
@@ -161,7 +177,7 @@ class _ReuseSpanConductor(_SpanConductor):
 ########################################################################################
 
 
-def _spanned(conductor: _SpanConductor, behavior: SpanBehavior) -> Callable[..., Any]:
+def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
     """Handle decorating a function with either a new span or a reused span."""
 
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -176,28 +192,28 @@ def _spanned(conductor: _SpanConductor, behavior: SpanBehavior) -> Callable[...,
             LOGGER.debug("Spanned Function")
             span = setup(args, kwargs)
 
-            if behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
+            if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with trace.use_span(span, end_on_exit=False):
                         return func(*args, **kwargs)
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
-            elif behavior == SpanBehavior.END_ON_EXIT:
+            elif conductor.behavior == SpanBehavior.END_ON_EXIT:
                 with trace.use_span(span, end_on_exit=True):
                     return func(*args, **kwargs)
-            elif behavior == SpanBehavior.DONT_END:
+            elif conductor.behavior == SpanBehavior.DONT_END:
                 with trace.use_span(span, end_on_exit=False):
                     return func(*args, **kwargs)
             else:
-                raise InvalidSpanBehavior(behavior)
+                raise InvalidSpanBehavior(conductor.behavior)
 
         @wraps(func)
         def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Generator Function")
             span = setup(args, kwargs)
 
-            if behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
+            if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with trace.use_span(span, end_on_exit=False):
                         for val in func(*args, **kwargs):
@@ -205,37 +221,37 @@ def _spanned(conductor: _SpanConductor, behavior: SpanBehavior) -> Callable[...,
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
-            elif behavior == SpanBehavior.END_ON_EXIT:
+            elif conductor.behavior == SpanBehavior.END_ON_EXIT:
                 with trace.use_span(span, end_on_exit=True):
                     for val in func(*args, **kwargs):
                         yield val
-            elif behavior == SpanBehavior.DONT_END:
+            elif conductor.behavior == SpanBehavior.DONT_END:
                 with trace.use_span(span, end_on_exit=False):
                     for val in func(*args, **kwargs):
                         yield val
             else:
-                raise InvalidSpanBehavior(behavior)
+                raise InvalidSpanBehavior(conductor.behavior)
 
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Async Function")
             span = setup(args, kwargs)
 
-            if behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
+            if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with trace.use_span(span, end_on_exit=False):
                         return await func(*args, **kwargs)
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
-            elif behavior == SpanBehavior.END_ON_EXIT:
+            elif conductor.behavior == SpanBehavior.END_ON_EXIT:
                 with trace.use_span(span, end_on_exit=True):
                     return await func(*args, **kwargs)
-            elif behavior == SpanBehavior.DONT_END:
+            elif conductor.behavior == SpanBehavior.DONT_END:
                 with trace.use_span(span, end_on_exit=False):
                     return await func(*args, **kwargs)
             else:
-                raise InvalidSpanBehavior(behavior)
+                raise InvalidSpanBehavior(conductor.behavior)
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
@@ -308,11 +324,11 @@ def spanned(
     return _spanned(
         _NewSpanConductor(
             {"attributes": attributes, "all_args": all_args, "these": these},
+            behavior,
             name,
             links,
             kind,
         ),
-        behavior,
     )
 
 
@@ -359,9 +375,9 @@ def respanned(
     return _spanned(
         _ReuseSpanConductor(
             {"attributes": attributes, "all_args": all_args, "these": these},
+            behavior,
             span_var_name,
         ),
-        behavior,
     )
 
 

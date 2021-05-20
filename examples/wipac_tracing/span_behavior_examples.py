@@ -33,7 +33,7 @@ class DemoClass:
         time.sleep(3)
 
         @wtt.respanned(None, wtt.SpanBehavior.END_ON_EXIT, all_args=True)
-        def legal_but_will_log_warnings(num: int) -> None:
+        def illegal(num: int) -> None:
             # this would end the span before the caller does
             pass
 
@@ -49,6 +49,12 @@ class DemoClass:
 
         legal_and_rare(11)
         legal_and_fine(22)
+        try:
+            illegal(33)
+        except wtt.spans.InvalidSpanBehavior:
+            assert 1
+        else:
+            assert 0
 
     @wtt.respanned(
         "self.span", wtt.SpanBehavior.ONLY_END_ON_EXCEPTION, attributes={"a": 2}
