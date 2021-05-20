@@ -13,12 +13,12 @@ if not os.getcwd().endswith("/wipac-telemetry-prototype"):
     raise RuntimeError("Script needs to be ran from root of repository.")
 
 sys.path.append(".")
-from wipac_telemetry import tracing_tools  # noqa: E402 # pylint: disable=C0413,E0401
+import wipac_telemetry.tracing_tools as wtt  # noqa: E402 # pylint: disable=C0413,E0401
 
 ########################################################################################
 
 
-@tracing_tools.evented(attributes={"city": "Liverpool"})
+@wtt.evented(attributes={"city": "Liverpool"})
 def evented_outer_function(beatle: str) -> None:
     """Print from this evented outer function."""
     logging.info("evented_outer_function()")
@@ -39,34 +39,34 @@ class EventExampleClass:
         self.selfie = "Kodak"
         self.cfa = _ClassForAttribute()
 
-    @tracing_tools.evented(these=["self.selfie", "self.klass", "self.cfa.msg"])
+    @wtt.evented(these=["self.selfie", "self.klass", "self.cfa.msg"])
     def evented_fellow_method(self, beatle: str) -> None:
         """Print from this evented instance method."""
         logging.info("evented_fellow_method()")
         print(beatle)
 
     @staticmethod
-    @tracing_tools.evented(name="static-method-001")
+    @wtt.evented(name="static-method-001")
     def evented_fellow_static_method(beatle: str) -> None:
         """Print from this evented static method."""
         logging.info("evented_fellow_static_method()")
         print(beatle)
 
-    @tracing_tools.spanned()
-    @tracing_tools.evented(attributes={"what": "an event!"})
+    @wtt.spanned()
+    @wtt.evented(attributes={"what": "an event!"})
     def spanned_and_evented_fellow_method(self, beatle: str) -> None:
         """Print from this spanned & evented instance method."""
         logging.info("spanned_and_evented_fellow_method()")
         print(beatle)
 
-    @tracing_tools.evented()
-    @tracing_tools.spanned()
+    @wtt.evented()
+    @wtt.spanned()
     def evented_and_spanned_fellow_method(self, beatle: str) -> None:
         """Print from this evented & spanned instance method."""
         logging.info("evented_and_spanned_fellow_method()")
         print(beatle)
 
-    @tracing_tools.spanned(all_args=True, these=["self.selfie"])
+    @wtt.spanned(all_args=True, these=["self.selfie"])
     def spanned_caller_method(self, album: str, year: int) -> None:
         """Call evented methods/functions in this method."""
         logging.info("spanned_caller_method()")
@@ -77,7 +77,7 @@ class EventExampleClass:
         EventExampleClass.evented_fellow_static_method("Paul")
         evented_outer_function("George")
 
-        @tracing_tools.evented(these=["beatle", "drums"], attributes={"year": year})
+        @wtt.evented(these=["beatle", "drums"], attributes={"year": year})
         def evented_local_function(beatle: str, song: str, drums: bool = False) -> None:
             logging.info("evented_local_function()")
             print(beatle)
@@ -90,15 +90,15 @@ class EventExampleClass:
         self.evented_and_spanned_fellow_method("The Sixth Beatle?!")
 
 
-@tracing_tools.spanned()
+@wtt.spanned()
 async def example_2_async() -> None:
     """Print and log simple message."""
 
-    @tracing_tools.evented()
+    @wtt.evented()
     def _inner_sync() -> None:
         print("inner-sync function")
 
-    @tracing_tools.evented()
+    @wtt.evented()
     async def _inner_async() -> None:
         await asyncio.sleep(2)
         print("inner-async function")
@@ -108,11 +108,11 @@ async def example_2_async() -> None:
     print("Done with async example.")
 
 
-@tracing_tools.spanned()
+@wtt.spanned()
 def example_3_iter_a_generator() -> None:
     """Span a generator."""
 
-    @tracing_tools.evented()
+    @wtt.evented()
     def _gen() -> Generator[int, None, None]:
         for i in range(5):
             yield i

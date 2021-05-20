@@ -11,28 +11,23 @@ if not os.getcwd().endswith("/wipac-telemetry-prototype"):
     raise RuntimeError("Script needs to be ran from root of repository.")
 
 sys.path.append(".")
-from wipac_telemetry import tracing_tools  # noqa: E402 # pylint: disable=C0413,E0401
-from wipac_telemetry.tracing_tools import (  # noqa: E402 # pylint: disable=C0413
-    OptSpan,
-    Span,
-    SpanBehavior,
-)
+import wipac_telemetry.tracing_tools as wtt  # noqa: E402 # pylint: disable=C0413,E0401
 
 
-@tracing_tools.spanned(behavior=SpanBehavior.INDEPENDENT_SPAN)
-def the_one_that_returns_a_span(span: OptSpan = None) -> Span:
-    """Use Span-injection to set the span."""
+@wtt.spanned(behavior=wtt.SpanBehavior.DONT_END)
+def the_one_that_returns_a_span() -> wtt.Span:
+    """Use wtt.Span-injection to set the span."""
     logging.info("the_one_that_returns_a_span()")
-    return cast(Span, span)
+    return wtt.get_current_span()
 
 
-@tracing_tools.evented(span="this_span")
-def the_one_with_an_overriding_span_event(this_span: Span) -> None:
+@wtt.evented(span="this_span")
+def the_one_with_an_overriding_span_event(this_span: wtt.Span) -> None:
     """Use an overriding-span to event this function."""
     logging.info("the_one_with_an_overriding_span_event()")
 
 
-@tracing_tools.evented()
+@wtt.evented()
 def the_one_with_a_plain_event() -> None:
     """Erroneously event this function without a current span context."""
     logging.info("the_one_with_a_plain_event()")
@@ -60,7 +55,7 @@ def example_1_no_current_span_context() -> None:
 ########################################################################################
 
 
-@tracing_tools.spanned()
+@wtt.spanned()
 def example_2_with_current_span_context() -> None:
     """Demo function-based overriding-span event."""
     logging.info("example_1_no_other_span_context()")
@@ -79,19 +74,19 @@ def example_2_with_current_span_context() -> None:
 class TheOneWithAnInstanceAttributeSpan:
     """A class with a span."""
 
-    def __init__(self, span: Span) -> None:
+    def __init__(self, span: wtt.Span) -> None:
         self.span = span
         self.id = 54641234724
         self.calls = 0
 
-    @tracing_tools.evented(span="self.span", these=["self.calls"])
+    @wtt.evented(span="self.span", these=["self.calls"])
     def yet_another_event(self) -> None:
         """Use a self.*-overriding span."""
         logging.info("yet_another_event()")
         self.calls += 300
 
 
-@tracing_tools.evented(span="inst.span", these=["inst.id"])
+@wtt.evented(span="inst.span", these=["inst.id"])
 def the_one_with_an_overriding_span_event_nested_in_an_instance(
     inst: TheOneWithAnInstanceAttributeSpan,
 ) -> None:
@@ -100,7 +95,7 @@ def the_one_with_an_overriding_span_event_nested_in_an_instance(
     inst.calls += 150
 
 
-@tracing_tools.spanned()
+@wtt.spanned()
 def example_3_instance_attribute_overrding_span() -> None:
     """Demo function-based overriding-span event."""
     logging.info("example_3_instance_attribute_overrding_span()")

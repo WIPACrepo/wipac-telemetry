@@ -6,7 +6,7 @@ import os
 import random
 import sys
 import time
-from typing import Optional, cast
+from typing import Optional
 
 import coloredlogs  # type: ignore[import]
 
@@ -14,25 +14,18 @@ if not os.getcwd().endswith("/wipac-telemetry-prototype"):
     raise RuntimeError("Script needs to be ran from root of repository.")
 
 sys.path.append(".")
-from wipac_telemetry import tracing_tools  # noqa: E402 # pylint: disable=C0413,E0401
-from wipac_telemetry.tracing_tools import (  # noqa: E402 # pylint: disable=C0413
-    Link,
-    OptSpan,
-    Span,
-    SpanBehavior,
-    make_link,
-)
+import wipac_telemetry.tracing_tools as wtt  # noqa: E402 # pylint: disable=C0413,E0401
 
 
 class Request:
     """An example request object."""
 
-    def __init__(self, message: str, span: Span, urgent: bool) -> None:
+    def __init__(self, message: str, span: wtt.Span, urgent: bool) -> None:
         self.message = message
-        self.span_link: Link = make_link(
+        self.span_link: wtt.Link = wtt.make_link(
             span, "Request", {"type": "message", "urgent": urgent}
         )
-        self.span_link_2: Optional[Link] = None
+        self.span_link_2: Optional[wtt.Link] = None
         self.id = random.randint(0, 90000)
         self.urgent = urgent
 
@@ -43,7 +36,7 @@ class Server:
     def __init__(self) -> None:
         pass
 
-    @tracing_tools.spanned(
+    @wtt.spanned(
         links=[
             "request.span_link",
             "request.span_link_2",
@@ -65,25 +58,11 @@ class Client:
     def __init__(self, server: Server) -> None:
         self.server = server
 
-    @tracing_tools.spanned(behavior=SpanBehavior.INDEPENDENT_SPAN, these=["urgent"])
-    def send_1_with_injection(
-        self, message: str, span: OptSpan = None, urgent: bool = False, delay: int = 0
-    ) -> None:
+    @wtt.spanned(these=["urgent"])
+    def send(self, message: str, urgent: bool = False, delay: int = 0) -> None:
         """Send request to server."""
-        span = cast(Span, span)
         time.sleep(delay)
-        self.server.incoming(Request(message, span, urgent))
-        span.end()  # NOTE: traces aren't sent until the span is closed / raises
-
-    @tracing_tools.spanned(these=["urgent"])
-    def send_2_without_injection(
-        self, message: str, urgent: bool = False, delay: int = 0
-    ) -> None:
-        """Send request to server."""
-        # span = cast(Span, span)
-        time.sleep(delay)
-        self.server.incoming(Request(message, tracing_tools.get_current_span(), urgent))
-        # span.end() -- no need, b/c not injecting -> span ends when function returns
+        self.server.incoming(Request(message, wtt.get_current_span(), urgent))
 
 
 def example_1() -> None:
@@ -93,8 +72,7 @@ def example_1() -> None:
     """
     server = Server()
     client = Client(server)
-    client.send_1_with_injection("Hello World!", delay=1)
-    client.send_2_without_injection("Hello Mars!", delay=1)
+    client.send("Hello World!", delay=1)
 
 
 if __name__ == "__main__":
