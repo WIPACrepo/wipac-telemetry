@@ -4,7 +4,7 @@
 import copy
 import inspect
 from collections.abc import Sequence
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from opentelemetry import trace
 from opentelemetry.util import types
@@ -24,7 +24,6 @@ Kwargs = Dict[str, Any]
 
 # aliases for easy importing
 Span = trace.Span
-OptSpan = Optional[Span]  # alias used for Span-argument injection
 Link = trace.Link
 get_current_span = trace.get_current_span
 SpanKind = trace.SpanKind
@@ -33,7 +32,7 @@ SpanKind = trace.SpanKind
 # Classes/Functions ####################################################################
 
 
-class FunctionInspection:
+class FunctionInspector:
     """A wrapper around a function and its introspection functionalities."""
 
     def __init__(self, func: Callable[..., Any], args: Args, kwargs: Kwargs):
@@ -45,7 +44,7 @@ class FunctionInspection:
         self.args = args
         self.kwargs = kwargs
 
-    def rget(
+    def resolve_attr(
         self, var_name: str, typ: Union[None, type, Tuple[type, ...]] = None
     ) -> Any:
         """Retrieve the instance at `var_name` from signature-parameter args.
@@ -109,6 +108,48 @@ class FunctionInspection:
             raise TypeError(f"Instance '{var_name}' is not {typ}")
         return obj
 
+    def get_links(self, links: Optional[List[str]],) -> List[Link]:
+        """Get all these Link instances."""
+        if not links:
+            return []
+
+        out = []
+        for var_name in links:
+            try:
+                link = self.resolve_attr(var_name, Link)
+            except TypeError as e:
+                LOGGER.warning(
+                    e
+                )  # this var_name could be a None value (aka an Optional[Span])
+            else:
+                out.append(link)
+
+        return out
+
+    def wrangle_otel_attributes(
+        self,
+        all_args: bool,
+        these: Optional[List[str]],
+        other_attributes: types.Attributes,
+    ) -> types.Attributes:
+        """Figure what attributes to use from the list and/or function args."""
+        raw: Dict[str, Any] = {}
+
+        if these:
+            raw.update({a: self.resolve_attr(a) for a in these})
+
+        if all_args:
+            raw.update(self.param_args)
+
+        if other_attributes:
+            raw.update(other_attributes)
+
+        return convert_to_attributes(raw)
+
+    def get_span(self, span_var_name: str) -> Span:
+        """Get the Span instance at `span_var_name`."""
+        return cast(Span, self.resolve_attr(span_var_name))
+
 
 def convert_to_attributes(
     raw: Union[Dict[str, Any], types.Attributes]
@@ -134,24 +175,3 @@ def convert_to_attributes(
         skips.append(attr)
 
     return {k: copy.deepcopy(v) for k, v in raw.items() if k not in skips}
-
-
-def wrangle_attributes(
-    attributes: types.Attributes,
-    func_inspect: FunctionInspection,
-    all_args: bool,
-    these: Optional[List[str]],
-) -> types.Attributes:
-    """Figure what attributes to use from the list and/or function args."""
-    raw: Dict[str, Any] = {}
-
-    if these:
-        raw.update({a: func_inspect.rget(a) for a in these})
-
-    if all_args:
-        raw.update(func_inspect.param_args)
-
-    if attributes:
-        raw.update(attributes)
-
-    return convert_to_attributes(raw)

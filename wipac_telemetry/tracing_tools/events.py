@@ -8,15 +8,7 @@ from typing import Any, Callable, List, Optional, Tuple
 
 from opentelemetry.util import types
 
-from .utils import (
-    LOGGER,
-    Args,
-    FunctionInspection,
-    Kwargs,
-    Span,
-    get_current_span,
-    wrangle_attributes,
-)
+from .utils import LOGGER, Args, FunctionInspector, Kwargs, Span, get_current_span
 
 
 def evented(
@@ -31,7 +23,7 @@ def evented(
     The event is added under the current context's span.
 
     Keyword Arguments:
-        event_name -- name of event; if not provided, use function's qualified name
+        name -- name of event; if not provided, use function's qualified name
         attributes -- a dict of attributes to add to event
         all_args -- whether to auto-add all the function's arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
@@ -43,11 +35,11 @@ def evented(
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         def setup(args: Args, kwargs: Kwargs) -> Tuple[Span, str, Kwargs]:
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
-            func_inspect = FunctionInspection(func, args, kwargs)
-            _attrs = wrangle_attributes(attributes, func_inspect, all_args, these)
+            func_inspect = FunctionInspector(func, args, kwargs)
+            _attrs = func_inspect.wrangle_otel_attributes(all_args, these, attributes)
 
             if span:
-                _span = func_inspect.rget(span, Span)
+                _span = func_inspect.get_span(span)
             else:
                 if not get_current_span().is_recording():
                     raise RuntimeError("There is no currently recording span context.")
