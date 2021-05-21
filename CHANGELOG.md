@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.0 (2021-05-21)
+### Feature
+* Rethink and Redo Span End/Exit Behavior ([#11](https://github.com/WIPACrepo/wipac-telemetry-prototype/issues/11)) ([`e78fc4b`](https://github.com/WIPACrepo/wipac-telemetry-prototype/commit/e78fc4b30afe3afaceede4bfe097628a6289c602))
+
 ## v0.0.6 (2021-05-14)
 
 
