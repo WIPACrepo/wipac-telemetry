@@ -7,7 +7,8 @@ import subprocess
 from setuptools import setup  # type: ignore[import]
 
 subprocess.run(
-    "pip install https://github.com/WIPACrepo/wipac-dev-tools.git".split(), check=True
+    "pip install git+https://github.com/WIPACrepo/wipac-dev-tools.git".split(),
+    check=True,
 )
 from wipac_dev_tools import SetupShop  # noqa: E402  # pylint: disable=C0413
 
