@@ -20,11 +20,7 @@ shop = SetupShop(
 )
 
 setup(
-    **shop.get_kwargs(
-        other_classifiers=["License :: OSI Approved :: MIT License"],
-        subpackages=["tracing_tools"],
-    ),
+    **shop.get_kwargs(subpackages=["tracing_tools"]),
     url="https://github.com/WIPACrepo/wipac-telemetry-prototype",
-    license="MIT",
     package_data={shop.name: ["py.typed"]},
 )
