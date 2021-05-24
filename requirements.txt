@@ -1,8 +1,8 @@
 git+https://github.com/WIPACrepo/wipac-dev-tools@v1.0.6#egg=wipac_dev_tools
-opentelemetry-api
-opentelemetry-exporter-jaeger
-opentelemetry-exporter-otlp
+opentelemetry-api<=1.2.0
+opentelemetry-exporter-jaeger<=1.2.0
+opentelemetry-exporter-otlp<=1.2.0
 opentelemetry-instrumentation-flask
 opentelemetry-instrumentation-requests
-opentelemetry-propagator-b3
-opentelemetry-sdk
+opentelemetry-propagator-b3<=1.2.0
+opentelemetry-sdk<=1.2.0
