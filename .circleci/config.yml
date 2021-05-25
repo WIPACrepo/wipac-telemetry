@@ -10,9 +10,18 @@ jobs:
               python3 -m virtualenv -p python3 env
               . env/bin/activate
               python setup.py install
+    examples:
+        docker:
+          - image: circleci/python:3.8
+        steps:
+          - checkout
+          - run: |
+              pip install -r requirements.txt
+              for f in examples/wipac_tracing/*.py; do python "$f"; done
 
 workflows:
     version: 2
     build_and_test:
         jobs:
             - try-setup-install
+            - examples

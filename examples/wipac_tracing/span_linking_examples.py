@@ -10,7 +10,7 @@ from typing import Optional
 
 import coloredlogs  # type: ignore[import]
 
-if not os.getcwd().endswith("/wipac-telemetry-prototype"):
+if "examples" not in os.listdir():
     raise RuntimeError("Script needs to be ran from root of repository.")
 
 sys.path.append(".")
