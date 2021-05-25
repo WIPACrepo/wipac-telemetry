@@ -10,7 +10,9 @@ jobs:
       - uses: actions/checkout@v2
       - run: |
           grep -P "\(\(\d+, ?\d+\), ?\(\d+, ?\d+\)\)" -oh setup.py | sed 's/ //g' | sed 's/,/./g' | grep -o -P "\d+\.\d+" > tmp.txt
-          cat tmp.txt
+          echo "`wc -l < tmp.txt` indicated python versions:"
+          echo "min version: $(head -n1 tmp.txt)"
+          echo "max version: $(tail -n1 tmp.txt)"
           grep "python-version: \['$(head -n1 tmp.txt)" .github/workflows/try-setup-install.yml
           grep "python-version: .*'$(tail -n1 tmp.txt)'\]" .github/workflows/try-setup-install.yml
 
