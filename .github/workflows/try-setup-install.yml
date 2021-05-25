@@ -1,0 +1,19 @@
+name: Try Setup Install
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+jobs:
+  try-setup-install:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Branch
+      uses: actions/checkout
+
+    - name: Execute
+      run: |
+        pip install -r requirements.txt
+        for f in examples/wipac_tracing/*.py; do python "$f"; done
