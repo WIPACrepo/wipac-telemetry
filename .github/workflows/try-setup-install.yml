@@ -6,15 +6,18 @@ jobs:
   try-setup-install:
     runs-on: ubuntu-latest
 
-    container:
-      image: docker/python:3.8.3
+    strategy:
+      matrix:
+        python-version: ['3.6', '3.7', '3.8']
 
     steps:
-    - name: Checkout Branch
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v2
 
-    - name: Execute
-      run: |
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - run: |
         python3 -m virtualenv -p python3 env
         . env/bin/activate
         python setup.py install
