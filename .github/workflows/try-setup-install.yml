@@ -13,7 +13,7 @@ jobs:
           echo "`wc -l < tmp.txt` indicated python versions:"
           echo "min version: $(head -n1 tmp.txt)"
           echo "max version: $(tail -n1 tmp.txt)"
-          grep "python-version: \['$(head -n1 tmp.txt)" .github/workflows/try-setup-install.yml
+          grep "python-version: '$(head -n1 tmp.txt)" .github/workflows/try-setup-install.yml
           grep "python-version: .*'$(tail -n1 tmp.txt)'\]" .github/workflows/try-setup-install.yml
 
 
