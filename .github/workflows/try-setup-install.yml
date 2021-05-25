@@ -12,5 +12,6 @@ jobs:
 
     - name: Execute
       run: |
-        pip install -r requirements.txt
-        for f in examples/wipac_tracing/*.py; do python "$f"; done
+        python3 -m virtualenv -p python3 env
+        . env/bin/activate
+        python setup.py install
