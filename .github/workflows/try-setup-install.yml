@@ -3,7 +3,7 @@ name: Try Setup Install
 on: [push]
 
 jobs:
-  confirm-all-versions:
+  confirm-all-py-versions:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,8 +18,8 @@ jobs:
           echo "all good, time for tests!"
 
 
-  try-setup-install:
-    needs: confirm-all-versions
+  setup-py-install:
+    needs: confirm-all-py-versions
     runs-on: ubuntu-latest
 
     strategy:
