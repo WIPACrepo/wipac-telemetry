@@ -12,7 +12,7 @@ jobs:
           grep -P "\(\(\d+, ?\d+\), ?\(\d+, ?\d+\)\)" -oh setup.py | sed 's/ //g' | sed 's/,/./g' | grep -o -P "\d+\.\d+" > tmp.txt
           echo "setup.py-indicated python range: $(head -n1 tmp.txt) - $(tail -n1 tmp.txt)"
           echo "confirming min version in this GH Workflow..."
-          grep "python-version: '$(head -n1 tmp.txt)" .github/workflows/try-setup-install.yml
+          grep "python-version: \['$(head -n1 tmp.txt)" .github/workflows/try-setup-install.yml
           echo "confirming max version in this GH Workflow..."
           grep "python-version: .*'$(tail -n1 tmp.txt)'\]" .github/workflows/try-setup-install.yml
           echo "all good, time for tests!"
