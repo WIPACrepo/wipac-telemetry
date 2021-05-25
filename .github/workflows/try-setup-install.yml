@@ -18,6 +18,4 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - run: |
-        python3 -m virtualenv -p python3 env
-        . env/bin/activate
         python setup.py install
