@@ -3,7 +3,20 @@ name: Try Setup Install
 on: [push]
 
 jobs:
+  confirm-all-versions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          grep -P "\(\(\d+, ?\d+\), ?\(\d+, ?\d+\)\)" -oh setup.py | sed 's/ //g' | sed 's/,/./g' | grep -o -P "\d+\.\d+" > tmp.txt
+          cat tmp.txt
+          grep "python-version: \['$(head -n1 tmp.txt)" .github/workflows/try-setup-install.yml
+          grep "python-version: .*'$(tail -n1 tmp.txt)'\]" .github/workflows/try-setup-install.yml
+
+
   try-setup-install:
+    needs: confirm-all-versions
     runs-on: ubuntu-latest
 
     strategy:
