@@ -6,6 +6,9 @@ jobs:
   try-setup-install:
     runs-on: ubuntu-latest
 
+    container:
+      image: docker/python:3.8.3
+
     steps:
     - name: Checkout Branch
       uses: actions/checkout@v2
