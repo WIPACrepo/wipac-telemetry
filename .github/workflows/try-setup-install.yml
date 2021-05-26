@@ -3,34 +3,35 @@ name: Try Setup Install
 on: [push]
 
 jobs:
-  confirm-all-py-versions:
-    runs-on: ubuntu-latest
 
+  gather-py3-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.py3_versions.outputs.matrix }}
     steps:
       - uses: actions/checkout@v2
-      - run: |
-          grep -P "\(\(\d+, ?\d+\), ?\(\d+, ?\d+\)\)" -oh setup.py | sed 's/ //g' | sed 's/,/./g' | grep -o -P "\d+\.\d+" > tmp.txt
-          echo "setup.py-indicated python range: $(head -n1 tmp.txt) - $(tail -n1 tmp.txt)"
-          echo "confirming min version in this GH Workflow..."
-          grep "python-version: \['$(head -n1 tmp.txt)" .github/workflows/try-setup-install.yml
-          echo "confirming max version in this GH Workflow..."
-          grep "python-version: .*'$(tail -n1 tmp.txt)'\]" .github/workflows/try-setup-install.yml
-          echo "all good, time for tests!"
-
+      - name: Python Versions
+        id: py3_versions
+        run: |
+          minmin_maxmax=$(grep -P "\(\(\d+, ?\d+\), ?\(\d+, ?\d+\)\)" -oh setup.py | sed 's/[^0-9]/ /g')
+          IFS=', ' read -r -a array <<< "$minmin_maxmax"
+          min_thru_max_series=$(for i in `seq ${array[1]} ${array[3]}`; do printf "3.$i,"; done | rev | cut -c 2- | rev)
+          echo ::set-output name=matrix::{\"py3_versions\":[$(echo $min_thru_max_series)]}\"
 
   setup-py-install:
-    needs: confirm-all-py-versions
+    needs: gather-py3-versions
     runs-on: ubuntu-latest
 
     strategy:
-      matrix:
-        python-version: ['3.6', '3.7', '3.8']
+      max-parallel: 4
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.gather-py3-versions.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.py3_versions }}
       - run: |
-          echo ${{ matrix.python-version }}
+          echo ${{ matrix.py3_versions }}
           python setup.py install
