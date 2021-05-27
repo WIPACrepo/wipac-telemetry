@@ -86,11 +86,13 @@ class _NewSpanConductor(_SpanConductor):
         name: str,
         links: List[str],
         kind: SpanKind,
+        carrier: str,
     ):
         super().__init__(otel_attrs_settings, behavior, "premiere")
         self.name = name
         self.links = links
         self.kind = kind
+        self.carrier = carrier
 
     def get_span(self, inspector: FunctionInspector) -> Span:
         """Set up, start, and return a new span instance."""
@@ -103,6 +105,8 @@ class _NewSpanConductor(_SpanConductor):
 
         if self.kind == SpanKind.SERVER:
             context = extract(inspector.resolve_attr("self.request.headers"))
+        elif self.carrier:
+            context = extract(inspector.resolve_attr(self.carrier))
         else:
             context = None  # `None` will default to current context
 
@@ -275,6 +279,7 @@ def spanned(
     behavior: SpanBehavior = SpanBehavior.END_ON_EXIT,
     links: Optional[List[str]] = None,
     kind: SpanKind = SpanKind.INTERNAL,
+    carrier: Optional[str] = None,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -310,6 +315,7 @@ def spanned(
                     * (looks at `self.request` instance for necessary info)
                 - `SpanKind.CONSUMER` - spanned function makes outgoing cross-service messages
                 - `SpanKind.PRODUCER` - spanned function handles incoming cross-service messages
+        carrier -- the name of the variable containing the context-carrier - useful for cross-process/service tracing
 
     Raises a `ValueError` when attempting to self-link the independent/injected span
     Raises a `InvalidSpanBehavior` when an invalid `behavior` value is attempted
@@ -320,6 +326,8 @@ def spanned(
         name = ""
     if not links:
         links = []
+    if not carrier:
+        carrier = ""
 
     return _spanned(
         _NewSpanConductor(
@@ -328,6 +336,7 @@ def spanned(
             name,
             links,
             kind,
+            carrier,
         ),
     )
 
