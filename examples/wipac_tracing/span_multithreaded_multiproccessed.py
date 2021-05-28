@@ -76,7 +76,7 @@ def example_10_threads(n_threads: int) -> None:
 
 @wtt.spanned(all_args=True, carrier="carrier")
 def process_work(worker: int, carrier: Dict[str, Any]) -> int:
-    """Do thread's work."""
+    """Do child process's work."""
     print(carrier)
     time.sleep(1)
     return worker
@@ -84,7 +84,7 @@ def process_work(worker: int, carrier: Dict[str, Any]) -> int:
 
 @wtt.spanned()
 def example_20_processes(n_threads: int) -> None:
-    """Run multiple independent threads, with a common carrier."""
+    """Run multiple independent process, with a common carrier."""
     futures: List[Future] = []  # type: ignore[type-arg]
     with ProcessPoolExecutor() as pool:
         for i in range(n_threads):
