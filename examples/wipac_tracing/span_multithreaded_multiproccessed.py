@@ -104,10 +104,10 @@ def example_20_processes(n_threads: int) -> None:
 if __name__ == "__main__":
     coloredlogs.install(level="DEBUG")
 
-    logging.warning("EXAMPLE #0 - Treaded, No Carrier")
+    logging.warning("EXAMPLE #0 - Threaded, No Carrier")
     example_00_threads_no_carrier(3)
 
-    logging.warning("EXAMPLE #10 - Treaded with Carrier")
+    logging.warning("EXAMPLE #10 - Threaded with Carrier")
     example_10_threads(3)
 
     logging.warning("EXAMPLE #20 - Processes with Carrier")
