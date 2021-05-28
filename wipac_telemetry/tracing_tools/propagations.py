@@ -3,19 +3,21 @@
 
 from typing import Any, Dict, Optional
 
-from opentelemetry import propagate
+from opentelemetry import propagate  # type: ignore[import]
 
 
 def inject_span_carrier(carrier: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Add current span info to a dict ("carrier") for inter-context tracing.
+    """Add current span info to a dict ("carrier") for distributed tracing.
 
-    A new key, `"traceparent"`, is added which can be used by the child.
-    This is a necessary step to make a span parent-child connection
-    between threads, processes, services, etc.
+    Adds a key, `"traceparent"`, which can be used by the child span to
+    make a parent connection (`parent_id`). This is a necessary step for
+    distributed tracing between threads, processes, services, etc.
 
     Optionally, pass in a ready-to-ship dict. This is for situations
-    where the carrier needs to be serializable, like the HTTP headers
-    dict.
+    where the carrier needs to be a payload within an established
+    protocol, like the HTTP-headers dict.
+
+    Returns the carrier (dict) with the added info.
     """
     if not carrier:
         carrier = {}
