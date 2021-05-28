@@ -56,7 +56,7 @@ def example_2_w_carrier(n_threads: int) -> None:
     futures: List[Future] = []  # type: ignore[type-arg]
     with ThreadPoolExecutor() as pool:
         for i in range(n_threads):
-            carrier = wtt.inject_context_carrier()
+            carrier = wtt.inject_span_carrier()
             print(carrier)
             futures.append(pool.submit(thread_work, i, carrier))
 
