@@ -103,9 +103,7 @@ class _NewSpanConductor(_SpanConductor):
 
         tracer_name = inspect.getfile(inspector.func)  # Ex: /path/to/file.py
 
-        if self.kind == SpanKind.SERVER:
-            context = extract(inspector.resolve_attr("self.request.headers"))
-        elif self.carrier:
+        if self.carrier:
             context = extract(inspector.resolve_attr(self.carrier))
         else:
             context = None  # `None` will default to current context
@@ -308,11 +306,9 @@ def spanned(
                         + use this when re-use is needed and an exception is NOT expected
         links -- a list of variable names of `Link` instances (span-links) - useful for cross-process tracing
         kind -- a `SpanKind` enum value
-                - ``SpanKind.INTERNAL` - (default) normal, in-application spans
+                - `SpanKind.INTERNAL` - (default) normal, in-application spans
                 - `SpanKind.CLIENT` - spanned function makes outgoing cross-service requests
                 - `SpanKind.SERVER` - spanned function handles incoming cross-service requests
-                    * contextually connected to a client-service's span via parent pointer
-                    * (looks at `self.request` instance for necessary info)
                 - `SpanKind.CONSUMER` - spanned function makes outgoing cross-service messages
                 - `SpanKind.PRODUCER` - spanned function handles incoming cross-service messages
         carrier -- the name of the variable containing the context-carrier - useful for cross-process/service tracing
