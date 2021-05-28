@@ -1,11 +1,16 @@
-"""Example script for the spanned() decorator."""
+"""Examples for spanned() decorator with multi-threaded/processed tracing."""
 
 
 import logging
 import os
 import sys
 import time
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from concurrent.futures import (
+    Future,
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+    as_completed,
+)
 from typing import Any, Dict, List
 
 import coloredlogs  # type: ignore[import]
@@ -20,7 +25,7 @@ import wipac_telemetry.tracing_tools as wtt  # noqa: E402 # pylint: disable=C041
 
 
 @wtt.spanned()
-def example_1_no_carrier(n_threads: int) -> None:
+def example_00_threads_no_carrier(n_threads: int) -> None:
     """Run multiple independent threads, without a common carrier."""
 
     @wtt.spanned(all_args=True)
@@ -43,7 +48,7 @@ def example_1_no_carrier(n_threads: int) -> None:
 
 
 @wtt.spanned()
-def example_2_w_carrier(n_threads: int) -> None:
+def example_10_threads(n_threads: int) -> None:
     """Run multiple independent threads, with a common carrier."""
 
     @wtt.spanned(all_args=True, carrier="carrier")
@@ -62,6 +67,34 @@ def example_2_w_carrier(n_threads: int) -> None:
 
     for worker in as_completed(futures):
         ret = worker.result()
+        wtt.add_event("Worker Join", {"worker-id": ret, "type": "thread"})
+        print(f"Returned Worker #{ret}")
+
+
+########################################################################################
+
+
+@wtt.spanned(all_args=True, carrier="carrier")
+def process_work(worker: int, carrier: Dict[str, Any]) -> int:
+    """Do thread's work."""
+    print(carrier)
+    time.sleep(1)
+    return worker
+
+
+@wtt.spanned()
+def example_20_processes(n_threads: int) -> None:
+    """Run multiple independent threads, with a common carrier."""
+    futures: List[Future] = []  # type: ignore[type-arg]
+    with ProcessPoolExecutor() as pool:
+        for i in range(n_threads):
+            carrier = wtt.inject_span_carrier()
+            print(carrier)
+            futures.append(pool.submit(process_work, i, carrier))
+
+    for worker in as_completed(futures):
+        ret = worker.result()
+        wtt.add_event("Worker Join", {"worker-id": ret, "type": "process"})
         print(f"Returned Worker #{ret}")
 
 
@@ -71,8 +104,11 @@ def example_2_w_carrier(n_threads: int) -> None:
 if __name__ == "__main__":
     coloredlogs.install(level="DEBUG")
 
-    logging.warning("EXAMPLE #1 - No carrier")
-    example_1_no_carrier(3)
+    logging.warning("EXAMPLE #0 - Treaded, No Carrier")
+    example_00_threads_no_carrier(3)
 
-    logging.warning("EXAMPLE #2 - With carrier")
-    example_2_w_carrier(3)
+    logging.warning("EXAMPLE #10 - Treaded with Carrier")
+    example_10_threads(3)
+
+    logging.warning("EXAMPLE #20 - Processes with Carrier")
+    example_20_processes(3)
