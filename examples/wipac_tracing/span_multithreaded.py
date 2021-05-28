@@ -74,5 +74,5 @@ if __name__ == "__main__":
     logging.warning("EXAMPLE #1 - No carrier")
     example_1_no_carrier(3)
 
-    logging.warning("EXAMPLE #1 - With carrier")
+    logging.warning("EXAMPLE #2 - With carrier")
     example_2_w_carrier(3)

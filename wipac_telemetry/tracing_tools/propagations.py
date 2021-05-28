@@ -3,12 +3,13 @@
 
 from typing import Any, Dict, Optional
 
-from opentelemetry import propagate  # type: ignore[import]
+from opentelemetry import propagate
 
 
 def inject_span_carrier(carrier: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Inject current tracing info into a dict for inter-context spanning.
+    """Add current span info to a dict ("carrier") for inter-context tracing.
 
+    A new key, `"traceparent"`, is added which can be used by the child.
     This is a necessary step to make a span parent-child connection
     between threads, processes, services, etc.
 
