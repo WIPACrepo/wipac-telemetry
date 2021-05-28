@@ -8,7 +8,7 @@ jobs:
           - checkout
           - run: |
               pip install -r requirements.txt
-              for f in examples/wipac_tracing/*.py; do python "$f"; done
+              ./examples/wipac_tracing/run_all_examples.sh
 
 workflows:
     version: 2
