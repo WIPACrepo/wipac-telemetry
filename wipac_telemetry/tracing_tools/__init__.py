@@ -12,23 +12,24 @@ from opentelemetry.sdk.trace.export import (  # type: ignore[import]
     SimpleSpanProcessor,
 )
 
-from . import propagations  # noqa
 from .config import CONFIG
-from .events import evented  # noqa
+from .events import add_event, evented  # noqa
+from .propagations import inject_span_carrier  # noqa
 from .spans import SpanBehavior, make_link, respanned, spanned  # noqa
 from .utils import Link, Span, SpanKind, get_current_span  # noqa
 
 __all__ = [
-    "propagations",
+    "add_event",
     "evented",
-    "make_link",
-    "spanned",
-    "respanned",
-    "Link",
-    "Span",
-    "SpanKind",
     "get_current_span",
+    "inject_span_carrier",
+    "Link",
+    "make_link",
+    "respanned",
+    "Span",
     "SpanBehavior",
+    "SpanKind",
+    "spanned",
 ]
 
 # Config SDK ###########################################################################

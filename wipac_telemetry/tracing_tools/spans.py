@@ -86,11 +86,13 @@ class _NewSpanConductor(_SpanConductor):
         name: str,
         links: List[str],
         kind: SpanKind,
+        carrier: str,
     ):
         super().__init__(otel_attrs_settings, behavior, "premiere")
         self.name = name
         self.links = links
         self.kind = kind
+        self.carrier = carrier
 
     def get_span(self, inspector: FunctionInspector) -> Span:
         """Set up, start, and return a new span instance."""
@@ -101,8 +103,8 @@ class _NewSpanConductor(_SpanConductor):
 
         tracer_name = inspect.getfile(inspector.func)  # Ex: /path/to/file.py
 
-        if self.kind == SpanKind.SERVER:
-            context = extract(inspector.resolve_attr("self.request.headers"))
+        if self.carrier:
+            context = extract(inspector.resolve_attr(self.carrier))
         else:
             context = None  # `None` will default to current context
 
@@ -158,12 +160,13 @@ class _ReuseSpanConductor(_SpanConductor):
 
         span.add_event(inspector.func.__qualname__, self.auto_event_attrs(attrs))
 
-        if self.behavior == SpanBehavior.END_ON_EXIT and span == get_current_span():
-            raise InvalidSpanBehavior(
-                "Attempting to re-span an already recording span "
-                "with `behavior=SpanBehavior.END_ON_EXIT` "
-                "(callee should not explicitly end caller's span)."
-            )
+        if self.behavior == SpanBehavior.END_ON_EXIT:
+            if span == get_current_span():
+                raise InvalidSpanBehavior(
+                    'Attempting to re-span the "current" span '
+                    "with `behavior=SpanBehavior.END_ON_EXIT` "
+                    "(callee should not explicitly end caller's span)."
+                )
 
         LOGGER.info(
             f"Re-using span `{span.name}` "
@@ -275,6 +278,7 @@ def spanned(
     behavior: SpanBehavior = SpanBehavior.END_ON_EXIT,
     links: Optional[List[str]] = None,
     kind: SpanKind = SpanKind.INTERNAL,
+    carrier: Optional[str] = None,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -303,13 +307,12 @@ def spanned(
                         + use this when re-use is needed and an exception is NOT expected
         links -- a list of variable names of `Link` instances (span-links) - useful for cross-process tracing
         kind -- a `SpanKind` enum value
-                - ``SpanKind.INTERNAL` - (default) normal, in-application spans
+                - `SpanKind.INTERNAL` - (default) normal, in-application spans
                 - `SpanKind.CLIENT` - spanned function makes outgoing cross-service requests
                 - `SpanKind.SERVER` - spanned function handles incoming cross-service requests
-                    * contextually connected to a client-service's span via parent pointer
-                    * (looks at `self.request` instance for necessary info)
                 - `SpanKind.CONSUMER` - spanned function makes outgoing cross-service messages
                 - `SpanKind.PRODUCER` - spanned function handles incoming cross-service messages
+        carrier -- the name of the variable containing the context-carrier - useful for cross-process/service tracing
 
     Raises a `ValueError` when attempting to self-link the independent/injected span
     Raises a `InvalidSpanBehavior` when an invalid `behavior` value is attempted
@@ -320,6 +323,8 @@ def spanned(
         name = ""
     if not links:
         links = []
+    if not carrier:
+        carrier = ""
 
     return _spanned(
         _NewSpanConductor(
@@ -328,6 +333,7 @@ def spanned(
             name,
             links,
             kind,
+            carrier,
         ),
     )
 
@@ -383,7 +389,7 @@ def respanned(
 
 ########################################################################################
 
-# TODO - figure out what to do with linking
+# TODO - figure out what to do with linking -> probably peer-to-peer / message-passing
 
 
 def make_link(
