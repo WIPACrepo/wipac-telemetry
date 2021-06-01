@@ -160,12 +160,13 @@ class _ReuseSpanConductor(_SpanConductor):
 
         span.add_event(inspector.func.__qualname__, self.auto_event_attrs(attrs))
 
-        if self.behavior == SpanBehavior.END_ON_EXIT and span == get_current_span():
-            raise InvalidSpanBehavior(
-                "Attempting to re-span an already recording span "
-                "with `behavior=SpanBehavior.END_ON_EXIT` "
-                "(callee should not explicitly end caller's span)."
-            )
+        if self.behavior == SpanBehavior.END_ON_EXIT:
+            if span == get_current_span():
+                raise InvalidSpanBehavior(
+                    'Attempting to re-span the "current" span '
+                    "with `behavior=SpanBehavior.END_ON_EXIT` "
+                    "(callee should not explicitly end caller's span)."
+                )
 
         LOGGER.info(
             f"Re-using span `{span.name}` "
