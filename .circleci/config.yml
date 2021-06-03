@@ -8,6 +8,7 @@ jobs:
           - checkout
           - run: |
               pip install -r requirements.txt
+              pip install pika
               ./examples/wipac_tracing/run_all_examples.sh
 
 workflows:
