@@ -11,7 +11,7 @@ from opentelemetry.propagate import extract
 from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, use_span
 from opentelemetry.util import types
 
-from .propagations import extract_link_carrier
+from .propagations import extract_links_carrier
 from .utils import LOGGER, Args, FunctionInspector, Kwargs
 
 ########################################################################################
@@ -65,12 +65,12 @@ class _SpanConductor:
         """Get a span, configure according to sub-class."""
         raise NotImplementedError()
 
-    def auto_event_attrs(self, span_attrs: types.Attributes) -> types.Attributes:
+    def auto_event_attrs(self, addl_spans: types.Attributes) -> types.Attributes:
         """Get the event attributes for auto-eventing a span."""
         return {
             "spanned_reason": self._autoevent_reason_value,
             "span_behavior": str(self.behavior),
-            "added_attributes": list(span_attrs.keys()) if span_attrs else [],
+            "added_attributes": list(addl_spans.keys()) if addl_spans else [],
         }
 
 
@@ -107,9 +107,9 @@ class _NewSpanConductor(_SpanConductor):
         else:
             context = None  # `None` will default to current context
 
-        link = None
+        links = []
         if self.carrier and self.carrier_relation == CarrierRelation.LINK:
-            link = extract_link_carrier(inspector.resolve_attr(self.carrier))
+            links = extract_links_carrier(inspector.resolve_attr(self.carrier))
 
         attrs = inspector.wrangle_otel_attributes(
             self.otel_attrs_settings["all_args"],
@@ -119,18 +119,14 @@ class _NewSpanConductor(_SpanConductor):
 
         tracer = get_tracer(tracer_name)
         span = tracer.start_span(
-            span_name,
-            context=context,
-            kind=self.kind,
-            attributes=attrs,
-            links=[link] if link else None,
+            span_name, context=context, kind=self.kind, attributes=attrs, links=links,
         )
         span.add_event(span_name, self.auto_event_attrs(attrs))
 
         LOGGER.info(
             f"Started span `{span_name}` for tracer `{tracer_name}` with: "
             f"attributes={list(attrs.keys()) if attrs else []}, "
-            f"links={[k.context for k in [link]]if link else None}"
+            f"links={[k.context for k in links] if links else None}"
         )
 
         return span
@@ -147,7 +143,6 @@ class _ReuseSpanConductor(_SpanConductor):
     ):
         super().__init__(otel_attrs_settings, behavior, "respanned")
         self.span_var_name = span_var_name
-        # TODO add links since their not init-dependent
 
     def get_span(self, inspector: FunctionInspector) -> Span:
         """Find, supplement, and return an exiting span instance."""

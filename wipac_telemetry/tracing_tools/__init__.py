@@ -20,14 +20,14 @@ from opentelemetry.trace import (  # noqa
 
 from .config import CONFIG
 from .events import add_event, evented  # noqa
-from .propagations import inject_link_carrier, inject_span_carrier  # noqa
+from .propagations import inject_links_carrier, inject_span_carrier  # noqa
 from .spans import CarrierRelation, SpanBehavior, respanned, spanned  # noqa
 
 __all__ = [
     "add_event",
     "evented",
     "get_current_span",
-    "inject_link_carrier",
+    "inject_links_carrier",
     "inject_span_carrier",
     "CarrierRelation",
     "respanned",

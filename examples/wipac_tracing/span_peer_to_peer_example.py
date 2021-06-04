@@ -25,6 +25,38 @@ LOGGER = logging.getLogger(__name__)
 
 
 @wtt.spanned(all_args=True, kind=wtt.SpanKind.PRODUCER)
+def go_publish(
+    some_span: wtt.Span,
+    friend: str,
+    myself: str,
+    channel: pika.adapters.blocking_connection.BlockingChannel,
+) -> None:
+    """Publish a message."""
+    msg = f"Hey {friend}, I'm {myself}"
+
+    headers = wtt.inject_links_carrier(
+        attrs={"name": "producer-span", "from": myself, "to": friend},
+        addl_spans={
+            some_span: {
+                "name": "some_span",
+                "NOTE": "explicitly linking `some_span` isn't necessary, it's `producer-span`'s parent",
+                "REASONING": "`some_span` is already automatically accessible via the `producer-span`'s `parent_id` pointer",
+                "FURTHERMORE": "this is just an example of linking multiple spans :D",
+            }
+        },
+    )
+
+    channel.basic_publish(
+        exchange="",
+        routing_key=friend,
+        body=msg,
+        properties=pika.BasicProperties(headers=headers),
+    )
+
+    print(f" [x] Sent '{msg}'")
+
+
+@wtt.spanned(all_args=True)
 def send(friend: str, myself: str) -> None:
     """Send a message."""
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=ADDRESS))
@@ -32,16 +64,7 @@ def send(friend: str, myself: str) -> None:
 
     channel.queue_declare(queue=friend)
 
-    msg = f"Hey {friend}, I'm {myself}"
-    channel.basic_publish(
-        exchange="",
-        routing_key=friend,
-        body=msg,
-        properties=pika.BasicProperties(
-            headers=wtt.inject_link_carrier(attrs={"from": myself, "to": friend})
-        ),
-    )
-    print(f" [x] Sent '{msg}'")
+    go_publish(wtt.get_current_span(), friend, myself, channel)
     connection.close()
 
 
