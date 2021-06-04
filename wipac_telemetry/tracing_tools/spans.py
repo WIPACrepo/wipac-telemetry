@@ -103,7 +103,6 @@ class _NewSpanConductor(_SpanConductor):
 
         if self.carrier and self.carrier_relation == CarrierRelation.SPAN_CHILD:
             context = extract(inspector.resolve_attr(self.carrier))
-            raise Exception(type(context))
         else:
             context = None  # `None` will default to current context
 
