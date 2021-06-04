@@ -37,7 +37,7 @@ def inject_span_carrier(carrier: Optional[Dict[str, Any]] = None) -> Dict[str, A
 def inject_links_carrier(
     carrier: Optional[Dict[str, Any]] = None,
     attrs: types.Attributes = None,
-    addl_spans: Optional[Dict[Span, types.Attributes]] = None,
+    addl_links: Optional[List[Link]] = None,
 ) -> Dict[str, Any]:
     """Add current span info to a dict ("carrier") for distributed tracing.
 
@@ -53,7 +53,7 @@ def inject_links_carrier(
         carrier -- *see above*
         attrs -- a collection of attributes that further describe the link connection
                  - uses the current span
-        addl_spans -- an additional set of spans and attribute collections, for additional links
+        addl_links -- an additional set of links
 
     Returns the carrier (dict) with the added info.
     """
@@ -62,9 +62,8 @@ def inject_links_carrier(
 
     links = [Link(get_current_span().get_span_context(), convert_to_attributes(attrs))]
 
-    if addl_spans:
-        for span, s_attrs in addl_spans.items():
-            links.append(Link(span.get_span_context(), convert_to_attributes(s_attrs)))
+    if addl_links:
+        links.extend(addl_links)
 
     carrier[_LINKS_KEY] = pickle.dumps(links)
 
@@ -80,3 +79,8 @@ def extract_links_carrier(carrier: Dict[str, Any]) -> List[Link]:
         return cast(List[Link], pickle.loads(carrier[_LINKS_KEY]))
     except KeyError:
         return []
+
+
+def span_to_link(span: Span, attrs: types.Attributes = None) -> Link:
+    """Create a link using a span instance and a collection of attributes."""
+    return Link(span.get_span_context(), convert_to_attributes(attrs))

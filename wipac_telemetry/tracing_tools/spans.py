@@ -65,12 +65,12 @@ class _SpanConductor:
         """Get a span, configure according to sub-class."""
         raise NotImplementedError()
 
-    def auto_event_attrs(self, addl_spans: types.Attributes) -> types.Attributes:
+    def auto_event_attrs(self, addl_links: types.Attributes) -> types.Attributes:
         """Get the event attributes for auto-eventing a span."""
         return {
             "spanned_reason": self._autoevent_reason_value,
             "span_behavior": str(self.behavior),
-            "added_attributes": list(addl_spans.keys()) if addl_spans else [],
+            "added_attributes": list(addl_links.keys()) if addl_links else [],
         }
 
 

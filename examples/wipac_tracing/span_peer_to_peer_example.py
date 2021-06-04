@@ -26,7 +26,7 @@ LOGGER = logging.getLogger(__name__)
 
 @wtt.spanned(all_args=True, kind=wtt.SpanKind.PRODUCER)
 def go_publish(
-    some_span: wtt.Span,
+    another_span: wtt.Span,
     friend: str,
     myself: str,
     channel: pika.adapters.blocking_connection.BlockingChannel,
@@ -34,16 +34,19 @@ def go_publish(
     """Publish a message."""
     msg = f"Hey {friend}, I'm {myself}"
 
+    another_link = wtt.span_to_link(
+        another_span,
+        {
+            "name": "another_span",
+            "NOTE": "explicitly linking `another_span` isn't necessary, it's `producer-span`'s parent",
+            "REASONING": "`another_span` is already automatically accessible via the `producer-span`'s `parent_id` pointer",
+            "FURTHERMORE": "this is just an example of linking multiple spans :D",
+        },
+    )
+
     headers = wtt.inject_links_carrier(
         attrs={"name": "producer-span", "from": myself, "to": friend},
-        addl_spans={
-            some_span: {
-                "name": "some_span",
-                "NOTE": "explicitly linking `some_span` isn't necessary, it's `producer-span`'s parent",
-                "REASONING": "`some_span` is already automatically accessible via the `producer-span`'s `parent_id` pointer",
-                "FURTHERMORE": "this is just an example of linking multiple spans :D",
-            }
-        },
+        addl_links=[another_link],
     )
 
     channel.basic_publish(
