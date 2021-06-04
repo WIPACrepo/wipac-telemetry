@@ -4,8 +4,10 @@ jobs:
     examples:
         docker:
           - image: circleci/python:3.8
+          - image: deadtrickster/rabbitmq_prometheus:3.7
         steps:
           - checkout
+          - run: dockerize -wait tcp://localhost:5672 -timeout 1m
           - run: |
               pip install -r requirements.txt
               pip install pika
