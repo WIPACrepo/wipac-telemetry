@@ -1,7 +1,7 @@
 # Run all the example python files
 
 
-files=`find examples/wipac_tracing/ -name '*.py' -a ! -name 'span_client_server_http.py'`
+files=`find examples/wipac_tracing/ -name '*.py' -a ! -name 'span_client_server_http.py' -a ! -name 'span_peer_to_peer_example.py'`
 for f in $files; do python "$f"; done
 
 python examples/wipac_tracing/span_client_server_http.py server &
