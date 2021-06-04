@@ -7,7 +7,7 @@ import sys
 import time
 
 import coloredlogs  # type: ignore[import]
-import pika
+import pika  # type: ignore[import]
 
 if "examples" not in os.listdir():
     raise RuntimeError("Script needs to be ran from root of repository.")
@@ -24,6 +24,7 @@ LOGGER = logging.getLogger(__name__)
 ########################################################################################
 
 
+@wtt.spanned(all_args=True, kind=wtt.SpanKind.PRODUCER)
 def send(friend: str, myself: str) -> None:
     """Send a message."""
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=ADDRESS))
@@ -32,23 +33,53 @@ def send(friend: str, myself: str) -> None:
     channel.queue_declare(queue=friend)
 
     msg = f"Hey {friend}, I'm {myself}"
-    channel.basic_publish(exchange="", routing_key=friend, body=msg)
+    channel.basic_publish(
+        exchange="",
+        routing_key=friend,
+        body=msg,
+        properties=pika.BasicProperties(
+            headers=wtt.inject_link_carrier(attrs={"from": myself, "to": friend})
+        ),
+    )
     print(f" [x] Sent '{msg}'")
     connection.close()
 
 
-def receive(myself: str) -> str:
+########################################################################################
+
+
+@wtt.spanned(
+    kind=wtt.SpanKind.CONSUMER,
+    these=["properties.headers.just-a-key"],
+    carrier="properties.headers",
+    carrier_relation=wtt.CarrierRelation.LINK,
+)
+def receive_callback(
+    channel: pika.adapters.blocking_connection.BlockingChannel,
+    method: pika.spec.Basic.Deliver,
+    properties: pika.spec.BasicProperties,
+    body: bytes,
+) -> None:
+    """Handle received message."""
+    print(channel)
+    print(method)
+    print(properties)
+    print(properties.headers)
+    print(f" [x] Received '{str(body)}'")
+    channel.stop_consuming()
+
+
+@wtt.spanned(all_args=True)
+def receive(myself: str) -> None:
     """Receive a message."""
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=ADDRESS))
     channel = connection.channel()
 
     channel.queue_declare(queue=myself)
 
-    def callback(ch, method, properties, body: bytes) -> None:
-        print(f" [x] Received '{str(body)}'")
-        channel.stop_consuming()
-
-    channel.basic_consume(queue=myself, on_message_callback=callback, auto_ack=True)
+    channel.basic_consume(
+        queue=myself, on_message_callback=receive_callback, auto_ack=True
+    )
 
     # print(" [*] Waiting for messages. To exit press CTRL+C")
     channel.start_consuming()
@@ -57,6 +88,7 @@ def receive(myself: str) -> str:
 ########################################################################################
 
 
+@wtt.spanned(all_args=True)
 def main() -> None:
     """Do the things."""
     try:
@@ -69,7 +101,7 @@ def main() -> None:
     send(friend, myself)
     time.sleep(1)
     receive(myself)
-
+    time.sleep(1)
     print("Done.")
 
 

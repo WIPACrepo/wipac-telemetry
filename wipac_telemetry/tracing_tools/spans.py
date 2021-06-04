@@ -7,23 +7,21 @@ from enum import Enum, auto
 from functools import wraps
 from typing import Any, Callable, Final, List, Optional, TypedDict
 
-from opentelemetry import trace
 from opentelemetry.propagate import extract
+from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, use_span
 from opentelemetry.util import types
 
-from .utils import (
-    LOGGER,
-    Args,
-    FunctionInspector,
-    Kwargs,
-    Link,
-    Span,
-    SpanKind,
-    convert_to_attributes,
-    get_current_span,
-)
+from .propagations import extract_link_carrier
+from .utils import LOGGER, Args, FunctionInspector, Kwargs
 
 ########################################################################################
+
+
+class CarrierRelation(Enum):
+    """Enum for indicating what span relation is intended for the carrier."""
+
+    SPAN_CHILD = auto()  # a hierarchical/vertical/parent-child relation
+    LINK = auto()  # a lateral/horizontal relation
 
 
 class SpanBehavior(Enum):
@@ -84,15 +82,15 @@ class _NewSpanConductor(_SpanConductor):
         otel_attrs_settings: _OTELAttributeSettings,
         behavior: SpanBehavior,
         name: str,
-        links: List[str],
         kind: SpanKind,
         carrier: str,
+        carrier_relation: CarrierRelation,
     ):
         super().__init__(otel_attrs_settings, behavior, "premiere")
         self.name = name
-        self.links = links
         self.kind = kind
         self.carrier = carrier
+        self.carrier_relation = carrier_relation
 
     def get_span(self, inspector: FunctionInspector) -> Span:
         """Set up, start, and return a new span instance."""
@@ -103,28 +101,36 @@ class _NewSpanConductor(_SpanConductor):
 
         tracer_name = inspect.getfile(inspector.func)  # Ex: /path/to/file.py
 
-        if self.carrier:
+        if self.carrier and self.carrier_relation == CarrierRelation.SPAN_CHILD:
             context = extract(inspector.resolve_attr(self.carrier))
+            raise Exception(type(context))
         else:
             context = None  # `None` will default to current context
 
-        _links = inspector.get_links(self.links)
+        link = None
+        if self.carrier and self.carrier_relation == CarrierRelation.LINK:
+            link = extract_link_carrier(inspector.resolve_attr(self.carrier))
+
         attrs = inspector.wrangle_otel_attributes(
             self.otel_attrs_settings["all_args"],
             self.otel_attrs_settings["these"],
             self.otel_attrs_settings["attributes"],
         )
 
-        tracer = trace.get_tracer(tracer_name)
+        tracer = get_tracer(tracer_name)
         span = tracer.start_span(
-            span_name, context=context, kind=self.kind, attributes=attrs, links=_links,
+            span_name,
+            context=context,
+            kind=self.kind,
+            attributes=attrs,
+            links=[link] if link else None,
         )
         span.add_event(span_name, self.auto_event_attrs(attrs))
 
         LOGGER.info(
             f"Started span `{span_name}` for tracer `{tracer_name}` with: "
             f"attributes={list(attrs.keys()) if attrs else []}, "
-            f"links={[k.context for k in _links]}"
+            f"links={[k.context for k in [link]]if link else None}"
         )
 
         return span
@@ -141,6 +147,7 @@ class _ReuseSpanConductor(_SpanConductor):
     ):
         super().__init__(otel_attrs_settings, behavior, "respanned")
         self.span_var_name = span_var_name
+        # TODO add links since their not init-dependent
 
     def get_span(self, inspector: FunctionInspector) -> Span:
         """Find, supplement, and return an exiting span instance."""
@@ -197,16 +204,16 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
 
             if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
-                    with trace.use_span(span, end_on_exit=False):
+                    with use_span(span, end_on_exit=False):
                         return func(*args, **kwargs)
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
             elif conductor.behavior == SpanBehavior.END_ON_EXIT:
-                with trace.use_span(span, end_on_exit=True):
+                with use_span(span, end_on_exit=True):
                     return func(*args, **kwargs)
             elif conductor.behavior == SpanBehavior.DONT_END:
-                with trace.use_span(span, end_on_exit=False):
+                with use_span(span, end_on_exit=False):
                     return func(*args, **kwargs)
             else:
                 raise InvalidSpanBehavior(conductor.behavior)
@@ -218,18 +225,18 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
 
             if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
-                    with trace.use_span(span, end_on_exit=False):
+                    with use_span(span, end_on_exit=False):
                         for val in func(*args, **kwargs):
                             yield val
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
             elif conductor.behavior == SpanBehavior.END_ON_EXIT:
-                with trace.use_span(span, end_on_exit=True):
+                with use_span(span, end_on_exit=True):
                     for val in func(*args, **kwargs):
                         yield val
             elif conductor.behavior == SpanBehavior.DONT_END:
-                with trace.use_span(span, end_on_exit=False):
+                with use_span(span, end_on_exit=False):
                     for val in func(*args, **kwargs):
                         yield val
             else:
@@ -242,16 +249,16 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
 
             if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
-                    with trace.use_span(span, end_on_exit=False):
+                    with use_span(span, end_on_exit=False):
                         return await func(*args, **kwargs)
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
             elif conductor.behavior == SpanBehavior.END_ON_EXIT:
-                with trace.use_span(span, end_on_exit=True):
+                with use_span(span, end_on_exit=True):
                     return await func(*args, **kwargs)
             elif conductor.behavior == SpanBehavior.DONT_END:
-                with trace.use_span(span, end_on_exit=False):
+                with use_span(span, end_on_exit=False):
                     return await func(*args, **kwargs)
             else:
                 raise InvalidSpanBehavior(conductor.behavior)
@@ -276,9 +283,9 @@ def spanned(
     all_args: bool = False,
     these: Optional[List[str]] = None,
     behavior: SpanBehavior = SpanBehavior.END_ON_EXIT,
-    links: Optional[List[str]] = None,
     kind: SpanKind = SpanKind.INTERNAL,
     carrier: Optional[str] = None,
+    carrier_relation: CarrierRelation = CarrierRelation.SPAN_CHILD,
 ) -> Callable[..., Any]:
     """Decorate to trace a function in a new span.
 
@@ -305,14 +312,16 @@ def spanned(
                     - `SpanBehavior.ONLY_END_ON_EXCEPTION`
                         + similar to `SpanBehavior.DONT_END` but auto-ends when an exception is raised
                         + use this when re-use is needed and an exception is NOT expected
-        links -- a list of variable names of `Link` instances (span-links) - useful for cross-process tracing
         kind -- a `SpanKind` enum value
                 - `SpanKind.INTERNAL` - (default) normal, in-application spans
                 - `SpanKind.CLIENT` - spanned function makes outgoing cross-service requests
                 - `SpanKind.SERVER` - spanned function handles incoming cross-service requests
                 - `SpanKind.CONSUMER` - spanned function makes outgoing cross-service messages
                 - `SpanKind.PRODUCER` - spanned function handles incoming cross-service messages
-        carrier -- the name of the variable containing the context-carrier - useful for cross-process/service tracing
+        carrier -- the name of the variable containing the carrier dict - useful for cross-process/service tracing
+        carrier_relation -- a `CarrierRelation` enum value, used alongside `carrier`
+                            - `CarrierRelation.SPAN_CHILD` - (default) for parent-child span relations
+                            - `CarrierRelation.LINK` - for lateral/horizontal span relations
 
     Raises a `ValueError` when attempting to self-link the independent/injected span
     Raises a `InvalidSpanBehavior` when an invalid `behavior` value is attempted
@@ -321,8 +330,6 @@ def spanned(
         these = []
     if not name:
         name = ""
-    if not links:
-        links = []
     if not carrier:
         carrier = ""
 
@@ -331,9 +338,9 @@ def spanned(
             {"attributes": attributes, "all_args": all_args, "these": these},
             behavior,
             name,
-            links,
             kind,
             carrier,
+            carrier_relation,
         ),
     )
 
@@ -385,18 +392,3 @@ def respanned(
             span_var_name,
         ),
     )
-
-
-########################################################################################
-
-# TODO - figure out what to do with linking -> probably peer-to-peer / message-passing
-
-
-def make_link(
-    span: Span, purpose: str, other_attributes: types.Attributes = None
-) -> Link:
-    """Make a Link for a Span (context) with a collection of attributes."""
-    attrs = dict(other_attributes) if other_attributes else {}
-    attrs["purpose"] = purpose
-
-    return Link(span.get_span_context(), attributes=convert_to_attributes(attrs))

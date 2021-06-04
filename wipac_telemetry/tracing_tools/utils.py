@@ -6,27 +6,18 @@ import inspect
 from collections.abc import Sequence
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
-from opentelemetry import trace
+from opentelemetry.trace import Span
 from opentelemetry.util import types
 
 from .config import LOGGER
 
-# Constants ############################################################################
+__all__ = ["LOGGER"]
 
 
 # Types ################################################################################
 
 Args = Tuple[Any, ...]
 Kwargs = Dict[str, Any]
-
-
-# Aliases ##############################################################################
-
-# aliases for easy importing
-Span = trace.Span
-Link = trace.Link
-get_current_span = trace.get_current_span
-SpanKind = trace.SpanKind
 
 
 # Classes/Functions ####################################################################
@@ -107,24 +98,6 @@ class FunctionInspector:
         if typ and not isinstance(obj, typ):
             raise TypeError(f"Instance '{var_name}' is not {typ}")
         return obj
-
-    def get_links(self, links: Optional[List[str]],) -> List[Link]:
-        """Get all these Link instances."""
-        if not links:
-            return []
-
-        out = []
-        for var_name in links:
-            try:
-                link = self.resolve_attr(var_name, Link)
-            except TypeError as e:
-                LOGGER.warning(
-                    e
-                )  # this var_name could be a None value (aka an Optional[Span])
-            else:
-                out.append(link)
-
-        return out
 
     def wrangle_otel_attributes(
         self,
