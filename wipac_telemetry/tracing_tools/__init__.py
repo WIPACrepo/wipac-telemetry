@@ -1,7 +1,6 @@
 """Init."""
 
 
-from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import]
     OTLPSpanExporter,
 )
@@ -11,22 +10,37 @@ from opentelemetry.sdk.trace.export import (  # type: ignore[import]
     ConsoleSpanExporter,
     SimpleSpanProcessor,
 )
+from opentelemetry.trace import (  # noqa
+    Link,
+    Span,
+    SpanKind,
+    get_current_span,
+    get_tracer_provider,
+    set_tracer_provider,
+)
 
 from .config import CONFIG
 from .events import add_event, evented  # noqa
-from .propagations import inject_span_carrier  # noqa
-from .spans import SpanBehavior, make_link, respanned, spanned  # noqa
-from .utils import Link, Span, SpanKind, get_current_span  # noqa
+from .propagations import (  # noqa
+    extract_links_carrier,
+    inject_links_carrier,
+    inject_span_carrier,
+    span_to_link,
+)
+from .spans import CarrierRelation, SpanBehavior, respanned, spanned  # noqa
 
 __all__ = [
     "add_event",
+    "CarrierRelation",
     "evented",
+    "extract_links_carrier",
     "get_current_span",
+    "inject_links_carrier",
     "inject_span_carrier",
     "Link",
-    "make_link",
     "respanned",
     "Span",
+    "span_to_link",
     "SpanBehavior",
     "SpanKind",
     "spanned",
@@ -34,16 +48,16 @@ __all__ = [
 
 # Config SDK ###########################################################################
 
-trace.set_tracer_provider(TracerProvider())
+set_tracer_provider(TracerProvider())
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
-    trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
+    get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
         # output to stdout
         SimpleSpanProcessor(ConsoleSpanExporter())
     )
 
 if CONFIG["WIPACTEL_EXPORT_OTLP"]:
-    trace.get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
+    get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
         # relies on env variables
         # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
         BatchSpanProcessor(OTLPSpanExporter())
