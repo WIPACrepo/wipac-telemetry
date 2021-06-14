@@ -1,0 +1,29 @@
+extensions:
+  health_check:
+
+receivers:
+  jaeger:
+    protocols:
+      thrift_http:
+
+processors:
+  batch:
+
+exporters:
+  opencensus:
+    endpoint: "oap:11800" # The OAP Server address
+    insecure: true
+  logging:
+    logLevel: debug
+
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [batch]
+      exporters: [opencensus]
+    traces:
+      receivers: [jaeger]
+      exporters: [otlp]
+
+  extensions: [health_check]

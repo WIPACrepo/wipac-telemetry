@@ -12,7 +12,7 @@ docker run \
     --restart always \
     openzipkin/zipkin
 
-echo "Telemetry Service Ready: Zipkin (ui:9411) (zipkin:9411)"
+echo "Telemetry Service Ready: Zipkin (web-ui:9411) (zipkin:9411)"
 
 # wait for Ctrl-C to stop the telemetry service
 ( trap exit SIGINT ; read -r -d '' _ </dev/tty )

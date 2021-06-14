@@ -5,6 +5,13 @@
 ES_TAG=${ES_TAG:="7.12.1"}
 SW_TAG=${SW_TAG:="8.5.0"}
 
+# ensure that we're being run from the correct spot for volume mounts
+CHECK_SCRIPT_HERE=$(which start-tempo.sh)
+if [ -z "$CHECK_SCRIPT_HERE" ]; then
+   echo "Please run $(basename $0) from the directory $(pwd)/$(dirname $0)"
+   exit 1
+fi
+
 # start the containers that provide the telemetry service
 echo "Starting Telemetry Service: Apache Skywalking (Please Wait...)"
 
@@ -19,13 +26,15 @@ docker run \
     --restart always \
     docker.elastic.co/elasticsearch/elasticsearch:${ES_TAG}
 
-sleep 15
+sleep 10
 
 docker run \
     --detach \
     --env "SW_STORAGE=elasticsearch7" \
     --env "SW_STORAGE_ES_CLUSTER_NODES=elasticsearch:9200" \
     --env "SW_HEALTH_CHECKER=default" \
+    --env "SW_OTEL_RECEIVER=default" \
+    --env "SW_OTEL_RECEIVER_ENABLED_OC_RULES=oap" \
     --env "SW_TELEMETRY=prometheus" \
     --link elasticsearch:elasticsearch \
     --name oap \
@@ -43,7 +52,16 @@ docker run \
     --restart always \
     apache/skywalking-ui:${SW_TAG}
 
-sleep 15
+sleep 5
+
+docker run \
+    --detach \
+    --link oap:oap \
+    --name otel-collector \
+    --publish 13133:13133 \
+    --publish 55678:55678 \
+    --volume $(pwd)/otel-collector-skywalking.yaml:/etc/otel-collector-skywalking.yaml \
+    otel/opentelemetry-collector:0.27.0 --config=/etc/otel-collector-skywalking.yaml
 
 echo "Telemetry Service Ready: Apache Skywalking (ui:8080) (oap:12800)"
 
@@ -52,4 +70,4 @@ echo "Telemetry Service Ready: Apache Skywalking (ui:8080) (oap:12800)"
 
 # stop and remove the containers that provide the telemetry service
 echo "Stopping Telemetry Service: Apache Skywalking"
-docker rm -f ui oap elasticsearch
+docker rm -f otel-collector ui oap elasticsearch
