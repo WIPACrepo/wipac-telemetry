@@ -53,7 +53,7 @@ def do_check_task() -> None:
 
 def do_circleci_task() -> None:
     """Run a CircleCI build."""
-    run(["circleci", "local", "execute", "--job", "test"])
+    run(["circleci", "local", "execute", "--job", "examples"])
 
 
 def do_coverage_task() -> None:
