@@ -26,7 +26,8 @@ docker run \
     --restart always \
     docker.elastic.co/elasticsearch/elasticsearch:${ES_TAG}
 
-sleep 10
+echo "Waiting for ElasticSearch cluster to start up (Please Wait...)"
+sleep 5
 
 docker run \
     --detach \
@@ -34,7 +35,8 @@ docker run \
     --env "SW_STORAGE_ES_CLUSTER_NODES=elasticsearch:9200" \
     --env "SW_HEALTH_CHECKER=default" \
     --env "SW_OTEL_RECEIVER=default" \
-    --env "SW_OTEL_RECEIVER_ENABLED_OC_RULES=oap" \
+    --env "SW_OTEL_RECEIVER_ENABLED_HANDLERS=oc" \
+    --env "SW_OTEL_RECEIVER_ENABLED_OC_RULES=istio-controlplane,oap" \
     --env "SW_TELEMETRY=prometheus" \
     --link elasticsearch:elasticsearch \
     --name oap \
@@ -52,18 +54,17 @@ docker run \
     --restart always \
     apache/skywalking-ui:${SW_TAG}
 
-sleep 5
-
+#    --detach \
 docker run \
-    --detach \
     --link oap:oap \
     --name otel-collector \
+    --publish 4317:4317 \
     --publish 13133:13133 \
-    --publish 55678:55678 \
+    --publish 55680:55680 \
     --volume $(pwd)/otel-collector-skywalking.yaml:/etc/otel-collector-skywalking.yaml \
-    otel/opentelemetry-collector:0.27.0 --config=/etc/otel-collector-skywalking.yaml
+    otel/opentelemetry-collector:latest --config=/etc/otel-collector-skywalking.yaml
 
-echo "Telemetry Service Ready: Apache Skywalking (ui:8080) (oap:12800)"
+echo "Telemetry Service Ready: Apache Skywalking (ui:8080) (oap:12800) (otel:55680)"
 
 # wait for Ctrl-C to stop the telemetry service
 ( trap exit SIGINT ; read -r -d '' _ </dev/tty )

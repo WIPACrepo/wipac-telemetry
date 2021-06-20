@@ -4,23 +4,18 @@ Showing off traces and logs in visualization tools
 ## Visualize Traces
 
 ### Apache Skywalking
-1. Open terminal window
+Apache Skywalking does not support OpenTelemetry traces:
+* https://github.com/apache/skywalking/issues/5884#issuecomment-732514234
+* https://github.com/apache/skywalking/issues/6135#issuecomment-755036573
 
-    cd ~/github/WIPACrepo/wipac-telemetry-prototype/examples/telemetry-server
+Their take is: Use OpenTelemetry collector to convert to Zipkin...
+https://github.com/apache/skywalking/issues/6445
 
-2. Run script to set up local Docker environment
+... which they consider an experimental reciever ...
+https://skywalking.apache.org/docs/main/latest/en/setup/backend/backend-receivers/#zipkin-receiver
 
-    ./start-skywalking.sh
-
-3. ????
-
-4. PROFIT!
-
-Seriously, Apache Skywalking looks very cool, but it's a Chinese project with
-non-native English documentation. At times, this makes it difficult to follow,
-and getting an OTEL collector set up has not been easy.
-
-It's probably worth investing some time in, but it will require a deeper dive.
+... and don't forget to enable Zipkin storage in ElasticSearch
+https://skywalking.apache.org/docs/main/latest/en/setup/backend/backend-storage/#elasticsearch-7-with-zipkin-trace-extension
 
 ### Grafana Tempo
 1. Open terminal window
@@ -65,20 +60,44 @@ It's probably worth investing some time in, but it will require a deeper dive.
 
     ./examples/telemetry-server/start-jaeger-opentelemetry.sh
 
-3. Open browser to Web UI
+3. Open browser to HotROD Web UI
+
+    google-chrome --new-window http://localhost:8080/
+
+4. You can manually reach the Jaeger UI with this command
 
     google-chrome --new-window http://localhost:16686/
 
 ### Zipkin
-Although we have a `start-zipkin.sh` script, the wipac_tracing tools export
-via console or OpenTelemetry. Sending traces via Zipkin is possible, but we're
-not configured for it yet and I didn't find an easy OTEL -> Zipkin component
-to set up.
+1. Open terminal window
+
+    cd ~/github/WIPACrepo/wipac-telemetry-prototype/examples/telemetry-server
+
+2. Run script to set up local Docker environment
+
+    ./start-zipkin.sh
+
+3. Open browser to Zipkin Web UI
+
+    google-chrome --new-window http://localhost:9411/zipkin/
+
+4. Click the blue Run Query button
+
+
 
 ## Generate Traces
 
-### Jaeger HOTrod
-TODO: Create a script for generating traces with Jaeger HOTrod
+### Jaeger HotROD
+* Run the Jaeger demo
+
+### Synthetic Load
+* Looked interesting; but the GitHub repository is archived and the tool is
+no longer recommended.
+
+    https://github.com/Omnition/synthetic-load-generator
+
+The open issues make it seem like it's not quite OpenTelemetry compatible,
+and my guess is the author didn't want to update it.
 
 ### wipac_telemetry run_all_examples.sh
 1. Open terminal window

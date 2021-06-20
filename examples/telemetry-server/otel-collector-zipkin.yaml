@@ -8,11 +8,9 @@ processors:
   batch:
 
 exporters:
-  opencensus:
-    endpoint: "oap:11800" # The OAP Server address
+  zipkin:
+    endpoint: "http://zipkin:9411/api/v2/spans"
     insecure: true
-  logging:
-    logLevel: debug
 
 extensions:
   health_check:
@@ -20,11 +18,7 @@ extensions:
 service:
   extensions: [health_check]
   pipelines:
-    metrics:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [opencensus]
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [opencensus]
+      exporters: [zipkin]

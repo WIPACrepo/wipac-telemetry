@@ -23,7 +23,15 @@ docker run \
     --publish 55680:55680 \
     jaegertracing/opentelemetry-all-in-one:${J_TAG}
 
-echo "Telemetry Service Ready: Jaeger (web-ui:16686) (zipkin:9411) (otel:55680)"
+docker run \
+  --detach \
+  --link jaeger:jaeger \
+  --name hotrod \
+  --publish 8080-8083:8080-8083 \
+  --env "JAEGER_AGENT_HOST=jaeger" \
+  jaegertracing/example-hotrod:latest all
+
+echo "Telemetry Service Ready: Jaeger (hotrod-ui:8080) (web-ui:16686) (zipkin:9411) (otel:55680)"
 echo ""
 echo "Port   Protocol  Component  Function"
 echo "5775   UDP       agent      accept zipkin.thrift over compact thrift protocol"
@@ -42,4 +50,4 @@ echo "55680            collector  OTLP receiver"
 
 # stop and remove the containers that provide the telemetry service
 echo "Stopping Telemetry Service: Jaeger OpenTelemetry"
-docker rm -f jaeger
+docker rm -f hotrod jaeger
