@@ -56,7 +56,7 @@ if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
         SimpleSpanProcessor(ConsoleSpanExporter())
     )
 
-if CONFIG["WIPACTEL_EXPORT_OTLP"]:
+if CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
     get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
         # relies on env variables
         # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
