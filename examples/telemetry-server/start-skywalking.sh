@@ -54,8 +54,8 @@ docker run \
     --restart always \
     apache/skywalking-ui:${SW_TAG}
 
-#    --detach \
 docker run \
+    --detach \
     --link oap:oap \
     --name otel-collector \
     --publish 4317:4317 \

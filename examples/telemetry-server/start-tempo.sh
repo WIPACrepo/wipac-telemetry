@@ -12,17 +12,16 @@ fi
 # start the containers that provide the telemetry service
 echo "Starting Telemetry Service: Grafana Tempo (Please Wait...)"
 
-mkdir -p /tmp/tempo-data
-
 # see: https://geekflare.com/grafana-tempo-intro/
 # see: https://grafana.com/docs/tempo/latest/configuration/#distributor
+mkdir -p /tmp/tempo-data
 docker run \
     --detach \
     --name tempo \
     --publish 3100:3100 \
+    --publish 4317:55680 \
     --publish 9411:9411 \
     --publish 14268:14268 \
-    --publish 55680:55680 \
     --publish 55681:55681 \
     --volume $(pwd)/tempo.yaml:/etc/tempo-local.yaml \
     --volume /tmp/tempo-data:/tmp/tempo \
@@ -63,11 +62,32 @@ docker run \
     --volume $(pwd)/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml \
     grafana/grafana:7.5.7
 
-echo "Telemetry Service Ready: Grafana Tempo (web-ui:16686) (otel:55680)"
+docker run \
+    --detach \
+    --link tempo:tempo \
+    --name jaeger \
+    --publish 6831:6831 \
+    --publish 6832:6832 \
+    --publish 13134:13133 \
+    --publish 14250:14250 \
+    --volume $(pwd)/otel-collector-tempo-jaeger.yaml:/etc/otel-collector-tempo-jaeger.yaml \
+    otel/opentelemetry-collector:latest --config=/etc/otel-collector-tempo-jaeger.yaml
+
+sleep 1
+
+#    --detach \
+docker run \
+  --link jaeger:jaeger \
+  --name hotrod \
+  --publish 8080-8083:8080-8083 \
+  --env "JAEGER_AGENT_HOST=jaeger" \
+  jaegertracing/example-hotrod:latest all &
+
+echo "Telemetry Service Ready: Grafana Tempo (web-ui:3000) (otel:4317) (hotrod-ui:8080)"
 
 # wait for Ctrl-C to stop the telemetry service
 ( trap exit SIGINT ; read -r -d '' _ </dev/tty )
 
 # stop and remove the containers that provide the telemetry service
 echo "Stopping Telemetry Service: Grafana Tempo"
-docker rm -f grafana prometheus otel-collector ui tempo
+docker rm -f hotrod jaeger grafana prometheus otel-collector ui tempo
