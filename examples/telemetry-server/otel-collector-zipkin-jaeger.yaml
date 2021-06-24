@@ -1,0 +1,26 @@
+receivers:
+  jaeger:
+    protocols:
+      grpc:
+      thrift_binary:
+      thrift_compact:
+      thrift_http:
+
+processors:
+  batch:
+
+exporters:
+  zipkin:
+    endpoint: "http://zipkin:9411/api/v2/spans"
+    insecure: true
+
+extensions:
+  health_check:
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [jaeger]
+      processors: [batch]
+      exporters: [zipkin]

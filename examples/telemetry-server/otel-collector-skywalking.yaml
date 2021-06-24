@@ -1,0 +1,30 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+processors:
+  batch:
+
+exporters:
+  opencensus:
+    endpoint: "oap:11800" # The OAP Server address
+    insecure: true
+  logging:
+    logLevel: debug
+
+extensions:
+  health_check:
+
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [opencensus]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [opencensus]
