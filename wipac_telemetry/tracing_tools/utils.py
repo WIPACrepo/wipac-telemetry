@@ -138,18 +138,23 @@ def convert_to_attributes(
 
     out = {}
     legal_types = (str, bool, int, float)
+
     for attr in list(raw):
+        # check if simple, single type
         if isinstance(raw[attr], legal_types):
             out[attr] = copy.deepcopy(raw[attr])
-            continue
-        # check all members of sequence are of same (legal) type
-        if isinstance(raw[attr], Sequence):
+
+        # is this a sequence?
+        elif isinstance(raw[attr], Sequence):
             member_types = list(set(type(m) for m in raw[attr]))
+            # if every member is same (legal) type, copy it all
             if len(member_types) == 1 and member_types[0] in legal_types:
                 out[attr] = copy.deepcopy(raw[attr])
-                continue
-            out[attr] = [repr(v) for v in raw[attr]]
+            else:
+                out[attr] = [repr(v) for v in raw[attr]]  # retain list, but as reprs
+
         # other types -> get `repr()`
-        out[attr] = repr(raw[attr])
+        else:
+            out[attr] = repr(raw[attr])
 
     return out
