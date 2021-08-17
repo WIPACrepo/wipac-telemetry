@@ -129,22 +129,27 @@ def convert_to_attributes(
 ) -> types.Attributes:
     """Convert dict to mapping of attributes (deep copy values).
 
-    Bad values are disregarded.
+    Values that aren't str/bool/int/float (or homogeneous
+    sequences of these) are swapped for their `repr()` strings,
+    wholesale.
     """
     if not raw:
         return {}
 
-    skips = []
+    out = {}
     legal_types = (str, bool, int, float)
     for attr in list(raw):
         if isinstance(raw[attr], legal_types):
+            out[attr] = copy.deepcopy(raw[attr])
             continue
-        # check all members are of same (legal) type
+        # check all members of sequence are of same (legal) type
         if isinstance(raw[attr], Sequence):
-            member_types = list(set(type(m) for m in raw[attr]))  # type: ignore[union-attr]
+            member_types = list(set(type(m) for m in raw[attr]))
             if len(member_types) == 1 and member_types[0] in legal_types:
+                out[attr] = copy.deepcopy(raw[attr])
                 continue
-        # illegal type
-        skips.append(attr)
+            out[attr] = [repr(v) for v in raw[attr]]
+        # other types -> get `repr()`
+        out[attr] = repr(raw[attr])
 
-    return {k: copy.deepcopy(v) for k, v in raw.items() if k not in skips}
+    return out
