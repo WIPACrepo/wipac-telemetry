@@ -5,7 +5,7 @@ from . import tracing_tools  # noqa
 __all__ = ["tracing_tools"]
 
 # version is a human-readable version number.
-__version__ = "0.1.9"
+__version__ = "0.1.10"
 
 # version_info is a four-tuple for programmatic comparison. The first
 # three numbers are the components of the version number. The fourth
