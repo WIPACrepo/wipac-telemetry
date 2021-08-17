@@ -118,7 +118,7 @@ class _NewSpanConductor(_SpanConductor):
 
         tracer = get_tracer(tracer_name)
         span = tracer.start_span(
-            span_name, context=context, kind=self.kind, attributes=attrs, links=links,
+            span_name, context=context, kind=self.kind, attributes=attrs, links=links
         )
         span.add_event(span_name, self.auto_event_attrs(attrs))
 
@@ -335,7 +335,7 @@ def spanned(
             kind,
             carrier,
             carrier_relation,
-        ),
+        )
     )
 
 
@@ -384,5 +384,5 @@ def respanned(
             {"attributes": attributes, "all_args": all_args, "these": these},
             behavior,
             span_var_name,
-        ),
+        )
     )
