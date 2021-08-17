@@ -3,7 +3,6 @@
 
 import copy
 import inspect
-from collections.abc import Sequence
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from opentelemetry.trace import Span
@@ -12,6 +11,8 @@ from opentelemetry.util import types
 from .config import LOGGER
 
 __all__ = ["LOGGER"]
+
+LEGAL_ATTR_BASE_TYPES = (str, bool, int, float)
 
 
 # Types ################################################################################
@@ -130,25 +131,42 @@ def convert_to_attributes(
     """Convert dict to mapping of attributes (deep copy values).
 
     Values that aren't str/bool/int/float (or homogeneous
-    sequences of these) are swapped for their `repr()` strings,
-    wholesale.
+    "Optional" tuples/lists of these) are swapped for
+    their `repr()` strings, wholesale.
+
+    From OTEL API:
+        AttributeValue = Union[
+            str,
+            bool,
+            int,
+            float,
+            Sequence[Optional[str]],
+            Sequence[Optional[bool]],
+            Sequence[Optional[int]],
+            Sequence[Optional[float]],
+        ]
+
+    Note: Types of sequences other than tuple and list are
+    treated as "other types", despite the OTEL API definition.
+    This is to safeguard against, tricky sequences like `bytes`,
+    custom instances, etc.
     """
     if not raw:
         return {}
 
     out = {}
-    legal_types = (str, bool, int, float)
 
     for attr in list(raw):
         # check if simple, single type
-        if isinstance(raw[attr], legal_types):
+        if isinstance(raw[attr], LEGAL_ATTR_BASE_TYPES):
             out[attr] = copy.deepcopy(raw[attr])
 
-        # is this a sequence?
-        elif isinstance(raw[attr], Sequence):
-            member_types = list(set(type(m) for m in raw[attr]))
+        # is this a tuple/list?
+        elif isinstance(raw[attr], (tuple, list)):
+            # get all types (but ignore `None`s b/c they're always allowed)
+            member_types = list(set(type(m) for m in raw[attr] if m is not None))
             # if every member is same (legal) type, copy it all
-            if len(member_types) == 1 and member_types[0] in legal_types:
+            if len(member_types) == 1 and member_types[0] in LEGAL_ATTR_BASE_TYPES:
                 out[attr] = copy.deepcopy(raw[attr])
             else:
                 out[attr] = [repr(v) for v in raw[attr]]  # retain list, but as reprs
