@@ -17,6 +17,14 @@ shop = SetupShop(
     os.path.abspath(os.path.dirname(__file__)),
     ((3, 6), (3, 8)),
     "WIPAC-Specific OpenTelemetry Tools",
+    pinned_packages=[
+        "coloredlogs",
+        "opentelemetry-api",
+        "opentelemetry-exporter-jaeger",
+        "opentelemetry-exporter-otlp",
+        "opentelemetry-propagator-b3",
+        "opentelemetry-sdk",
+    ],
 )
 
 setup(
