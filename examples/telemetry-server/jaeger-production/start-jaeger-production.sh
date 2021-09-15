@@ -13,6 +13,15 @@ ES_TAG=${ES_TAG:="latest"}
 J_TAG=${J_TAG:="latest"}
 OT_TAG=${OT_TAG:="latest"}
 
+# ensure that we've got the correct image
+echo "Pulling docker images..."
+docker pull bitnami/elasticsearch:${ES_TAG}
+docker pull jaegertracing/jaeger-collector:${J_TAG}
+docker pull jaegertracing/jaeger-agent:${J_TAG}
+docker pull jaegertracing/jaeger-query:${J_TAG}
+docker pull otel/opentelemetry-collector:${OT_TAG}
+docker pull jaegertracing/example-hotrod:latest
+
 # start the containers that provide the telemetry service
 echo "Starting Telemetry Service: Jaeger OpenTelemetry (Please Wait...)"
 
@@ -33,16 +42,16 @@ docker run \
 echo "Waiting for ElasticSearch cluster to start up (Please Wait...)"
 sleep 30
 
+# --publish 9411:9411 \
+# --publish 14268:14268 \
+# --publish 14269:14269 \
 docker run \
     --detach \
     --env "SPAN_STORAGE_TYPE=elasticsearch" \
     --env "ES_SERVER_URLS=http://elasticsearch:9200" \
     --link elasticsearch:elasticsearch \
     --name jaeger-collector \
-    --publish 9411:9411 \
     --publish 14250:14250 \
-    --publish 14268:14268 \
-    --publish 14269:14269 \
     --rm \
     jaegertracing/jaeger-collector:${J_TAG}
 
@@ -71,13 +80,15 @@ docker run \
     --rm \
     jaegertracing/jaeger-query:${J_TAG}
 
+# --publish 55678:55678 \
+# --publish 55679:55679 \
 docker run \
-   --detach \
+    --detach \
     --link jaeger-collector:jaeger-collector \
     --name otel-collector \
     --publish 4317:4317 \
+    --publish 4318:4318 \
     --publish 13133:13133 \
-    --publish 55678-55679:55678-55679 \
     --rm \
     --volume $(pwd)/otel-collector.yaml:/etc/otel-collector.yaml \
     otel/opentelemetry-collector:${OT_TAG} \
@@ -93,7 +104,7 @@ docker run \
     --rm \
     jaegertracing/example-hotrod:latest all
 
-echo "Telemetry Service Ready: Jaeger (hotrod-ui:8080) (jaeger:14250) (otlp:4317) (web-ui:16686) (zipkin:9411)"
+echo "Telemetry Service Ready: Jaeger (hotrod-ui:8080) (jaeger:14250) (otlp-grpc:4317) (otlp-http:4318) (web-ui:16686)"
 
 # wait for Ctrl-C to stop the telemetry service
 ( trap exit SIGINT ; read -r -d '' _ </dev/tty )

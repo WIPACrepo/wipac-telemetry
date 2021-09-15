@@ -1,7 +1,8 @@
 """Init."""
 
 
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import]
+# from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import]
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[import]
     OTLPSpanExporter,
 )
 from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
