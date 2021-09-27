@@ -15,7 +15,7 @@ class _TypedConfig(TypedDict):
 
 defaults: _TypedConfig = {
     "OTEL_EXPORTER_OTLP_ENDPOINT": "",
-    "WIPACTEL_EXPORT_STDOUT": True,
+    "WIPACTEL_EXPORT_STDOUT": False,
     "WIPACTEL_LOGGING_LEVEL": "WARNING",
 }
 CONFIG = cast(_TypedConfig, from_environment(cast(KeySpec, defaults)))
