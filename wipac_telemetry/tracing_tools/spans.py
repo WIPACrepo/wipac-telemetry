@@ -5,12 +5,12 @@ import asyncio
 import inspect
 from enum import Enum, auto
 from functools import wraps
-from typing import Any, Callable, Final, List, Optional
+from typing import Any, Callable, List, Optional
 
 try:
-    from typing import TypedDict
+    from typing import Final, TypedDict
 except ImportError:
-    from typing_extensions import TypedDict
+    from typing_extensions import TypedDict, Final
 
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, use_span
