@@ -10,7 +10,7 @@ from typing import Any, Callable, List, Optional
 try:
     from typing import Final, TypedDict
 except ImportError:
-    from typing_extensions import TypedDict, Final
+    from typing_extensions import Final, TypedDict  # type: ignore[misc]
 
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, use_span
