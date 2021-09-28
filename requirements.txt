@@ -10,3 +10,4 @@ opentelemetry-instrumentation-requests
 opentelemetry-propagator-b3==1.5.0
 opentelemetry-sdk==1.5.0
 pika==1.2.0
+typing-extensions
