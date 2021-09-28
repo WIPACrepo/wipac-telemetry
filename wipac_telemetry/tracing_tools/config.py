@@ -1,7 +1,12 @@
 """Tracing config file."""
 
 import logging
-from typing import TypedDict, cast
+from typing import cast
+
+try:
+    from typing import TypedDict
+except ImportError:
+    from typing_extensions import TypedDict
 
 from wipac_dev_tools import from_environment
 from wipac_dev_tools.enviro_tools import KeySpec
