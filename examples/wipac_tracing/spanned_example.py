@@ -2,11 +2,12 @@
 
 
 import asyncio
+import itertools as it
 import logging
 import os
 import sys
 import time
-from typing import Dict, Generator, List, Optional
+from typing import Dict, Iterator, List, Optional
 
 import coloredlogs  # type: ignore[import]
 
@@ -186,37 +187,58 @@ async def example_20_async() -> None:
 
 
 @wtt.spanned()
-def example_30_iter_a_generator_function() -> None:
-    """Span a generator (from a basic iterator function)."""
+def example_30_iter_an_iterator_function() -> None:
+    """Span an iterator (from a basic iterator function)."""
 
-    @wtt.spanned()
-    def _gen() -> Generator[int, None, None]:
-        for i in range(5):
-            yield i
+    @wtt.spanned(these=["name"])
+    def _gen(name: str) -> Iterator[int, None, None]:
+        # pylint: disable=invalid-name
+        a, b = 0, 1
+        for _ in range(5):
+            ret = a
+            a, b = b, a + b
+            yield ret
 
-    gen = _gen()
-    for num in gen:
-        print(num)
+    name = "function-return variable w/ loop"
+    print(f"---{name}---")
+    gen = _gen(name)
+    for i, num in enumerate(gen):
+        print(f"#{i} :: {num}")
         time.sleep(0.25)
 
-    for num in _gen():
-        print(num)
+    name = "function-return directly w/ loop"
+    print(f"---{name}---")
+    for i, num in enumerate(_gen(name)):
+        print(f"#{i} :: {num}")
+        time.sleep(0.25)
+
+    name = "function-return variable w/ next()"
+    print(f"---{name}---")
+    # will record as "Error" for OpenTelemetry
+    gen = _gen(name)
+    for i in it.count(0):
+        try:
+            num = next(gen)
+        except StopIteration:
+            break
+        print(f"#{i} :: {num}")
         time.sleep(0.25)
 
 
 @wtt.spanned()
-def example_31_iter_a_generator_class() -> None:
-    """Span a generator (from a generator class instance)."""
+def example_31_iter_an_iterator_class() -> None:
+    """Span an iterator (from an iterator class instance)."""
 
     class Fib:
-        """Fibonacci generator-iterator."""
+        """Fibonacci iterator object."""
 
-        def __init__(self, max: int) -> None:
-            self.a, self.b = 0, 1
-            self.max = 5
+        def __init__(self, name: str, maximum: int) -> None:
+            self.a, self.b = 0, 1  # pylint: disable=invalid-name
+            self.max = maximum
             self.i = 0
+            self.name = name
 
-        @wtt.spanned()
+        @wtt.spanned(these=["self.name"])
         def __next__(self) -> int:
             if self.max == self.i:
                 raise StopIteration
@@ -229,13 +251,29 @@ def example_31_iter_a_generator_class() -> None:
         def __iter__(self) -> "Fib":
             return self
 
-    gen = Fib(5)
-    for num in gen:
-        print(num)
+    name = "class-instance variable w/ loop"
+    print(f"---{name}---")
+    gen = Fib(name, 5)
+    for i, num in enumerate(gen):
+        print(f"#{i} :: {num}")
         time.sleep(0.25)
 
-    for num in Fib(5):
-        print(num)
+    name = "class-instance directly w/ loop"
+    print(f"---{name}---")
+    for i, num in enumerate(Fib(name, 5)):
+        print(f"#{i} :: {num}")
+        time.sleep(0.25)
+
+    name = "class-instance variable w/ next()"
+    print(f"---{name}---")
+    # will record as "Error" for OpenTelemetry
+    gen = Fib(name, 5)
+    for i in it.count(0):
+        try:
+            num = next(gen)
+        except StopIteration:
+            break
+        print(f"#{i} :: {num}")
         time.sleep(0.25)
 
 
@@ -329,8 +367,8 @@ if __name__ == "__main__":
     logging.warning("EXAMPLE #20 - NESTED ASYNC")
     asyncio.get_event_loop().run_until_complete(example_20_async())
 
-    logging.warning("EXAMPLE #30 - GENERATOR FUNCTION")
-    example_30_iter_a_generator_function()
+    logging.warning("EXAMPLE #30 - ITERATOR FUNCTION")
+    example_30_iter_an_iterator_function()
 
-    logging.warning("EXAMPLE #31 - GENERATOR CLASS")
-    example_31_iter_a_generator_class()
+    logging.warning("EXAMPLE #31 - ITERATOR CLASS")
+    example_31_iter_an_iterator_class()
