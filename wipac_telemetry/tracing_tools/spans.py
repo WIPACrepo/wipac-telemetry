@@ -241,6 +241,7 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
                     raise StopIteration
                 raise RuntimeError("Malformed SpanBehavior Handling")
             # CASE 3 ----------------------------------------------------------
+            # NOTE: logic is identical to above case, except end behavior
             elif conductor.behavior == SpanBehavior.DONT_END:
                 with use_span(span, end_on_exit=False):
                     try:
@@ -262,6 +263,7 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
             LOGGER.debug("Spanned Generator Function")
             span = setup(args, kwargs)
 
+            # CASE 1 ----------------------------------------------------------
             if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with use_span(span, end_on_exit=False):
@@ -270,14 +272,18 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
+            # CASE 2 ----------------------------------------------------------
             elif conductor.behavior == SpanBehavior.END_ON_EXIT:
                 with use_span(span, end_on_exit=True):
                     for val in func(*args, **kwargs):
                         yield val
+            # CASE 3 ----------------------------------------------------------
+            # NOTE: logic is identical to above case, except end behavior
             elif conductor.behavior == SpanBehavior.DONT_END:
                 with use_span(span, end_on_exit=False):
                     for val in func(*args, **kwargs):
                         yield val
+            # ELSE ------------------------------------------------------------
             else:
                 raise InvalidSpanBehavior(conductor.behavior)
 
@@ -286,6 +292,7 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
             LOGGER.debug("Spanned Async Function")
             span = setup(args, kwargs)
 
+            # CASE 1 ----------------------------------------------------------
             if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with use_span(span, end_on_exit=False):
@@ -293,12 +300,16 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
+            # CASE 2 ----------------------------------------------------------
             elif conductor.behavior == SpanBehavior.END_ON_EXIT:
                 with use_span(span, end_on_exit=True):
                     return await func(*args, **kwargs)
+            # CASE 3 ----------------------------------------------------------
+            # NOTE: logic is identical to above case, except end behavior
             elif conductor.behavior == SpanBehavior.DONT_END:
                 with use_span(span, end_on_exit=False):
                     return await func(*args, **kwargs)
+            # ELSE ------------------------------------------------------------
             else:
                 raise InvalidSpanBehavior(conductor.behavior)
 
