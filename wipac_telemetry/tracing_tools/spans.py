@@ -13,7 +13,14 @@ except ImportError:
     from typing_extensions import Final, TypedDict  # type: ignore[misc]
 
 from opentelemetry.propagate import extract
-from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, use_span
+from opentelemetry.trace import (
+    Span,
+    SpanKind,
+    get_current_span,
+    get_tracer,
+    status,
+    use_span,
+)
 from opentelemetry.util import types
 
 from .propagations import extract_links_carrier
@@ -200,20 +207,53 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Function")
             span = setup(args, kwargs)
+            is_iterator_class_next_method = span.name.endswith(".__next__")
+            reraise_stopiteration_outside_contextmanager = False
 
+            # CASE 1 ----------------------------------------------------------
             if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with use_span(span, end_on_exit=False):
-                        return func(*args, **kwargs)
+                        try:
+                            return func(*args, **kwargs)
+                        except StopIteration:
+                            # intercept and temporarily suppress StopIteration
+                            if not is_iterator_class_next_method:
+                                raise
+                            reraise_stopiteration_outside_contextmanager = True
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
+                if reraise_stopiteration_outside_contextmanager:
+                    raise StopIteration
+                raise RuntimeError("Malformed SpanBehavior Handling")
+            # CASE 2 ----------------------------------------------------------
             elif conductor.behavior == SpanBehavior.END_ON_EXIT:
                 with use_span(span, end_on_exit=True):
-                    return func(*args, **kwargs)
+                    try:
+                        return func(*args, **kwargs)
+                    except StopIteration:
+                        # intercept and temporarily suppress StopIteration
+                        if not is_iterator_class_next_method:
+                            raise
+                        reraise_stopiteration_outside_contextmanager = True
+                if reraise_stopiteration_outside_contextmanager:
+                    raise StopIteration
+                raise RuntimeError("Malformed SpanBehavior Handling")
+            # CASE 3 ----------------------------------------------------------
             elif conductor.behavior == SpanBehavior.DONT_END:
                 with use_span(span, end_on_exit=False):
-                    return func(*args, **kwargs)
+                    try:
+                        return func(*args, **kwargs)
+                    except StopIteration:
+                        # intercept and temporarily suppress StopIteration
+                        if not is_iterator_class_next_method:
+                            raise
+                        reraise_stopiteration_outside_contextmanager = True
+                if reraise_stopiteration_outside_contextmanager:
+                    raise StopIteration
+                raise RuntimeError("Malformed SpanBehavior Handling")
+            # ELSE ------------------------------------------------------------
             else:
                 raise InvalidSpanBehavior(conductor.behavior)
 
