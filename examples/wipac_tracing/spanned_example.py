@@ -7,7 +7,7 @@ import logging
 import os
 import sys
 import time
-from typing import Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 import coloredlogs  # type: ignore[import]
 
@@ -191,7 +191,7 @@ def example_30_iter_an_iterator_function() -> None:
     """Span an iterator (from a basic iterator function)."""
 
     @wtt.spanned(these=["name"])
-    def _gen(name: str) -> Iterator[int, None, None]:
+    def _gen(name: str) -> Iterator[int]:
         # pylint: disable=invalid-name
         a, b = 0, 1
         for _ in range(5):
@@ -212,13 +212,19 @@ def example_30_iter_an_iterator_function() -> None:
         print(f"#{i} :: {num}")
         time.sleep(0.25)
 
+    @wtt.spanned()
+    def wrap_manual_iter(gen: Iterator[int]) -> Any:
+        # will record as "Error" for OpenTelemetry on StopIteration
+        # but **NOT** on `gen`'s trace(s)
+        return next(gen)
+
     name = "function-return variable w/ next()"
     print(f"---{name}---")
     # will record as "Error" for OpenTelemetry
     gen = _gen(name)
     for i in it.count(0):
         try:
-            num = next(gen)
+            num = wrap_manual_iter(gen)
         except StopIteration:
             break
         print(f"#{i} :: {num}")
@@ -264,13 +270,18 @@ def example_31_iter_an_iterator_class() -> None:
         print(f"#{i} :: {num}")
         time.sleep(0.25)
 
+    @wtt.spanned()
+    def wrap_manual_iter(gen: Fib) -> Any:
+        # will record as "Error" for OpenTelemetry on StopIteration
+        # but **NOT** on __next__()'s trace
+        return next(gen)
+
     name = "class-instance variable w/ next()"
     print(f"---{name}---")
-    # will record as "Error" for OpenTelemetry
     gen = Fib(name, 5)
     for i in it.count(0):
         try:
-            num = next(gen)
+            num = wrap_manual_iter(gen)
         except StopIteration:
             break
         print(f"#{i} :: {num}")
