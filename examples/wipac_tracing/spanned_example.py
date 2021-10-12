@@ -186,8 +186,8 @@ async def example_20_async() -> None:
 
 
 @wtt.spanned()
-def example_30_iter_a_generator() -> None:
-    """Span a generator."""
+def example_30_iter_a_generator_function() -> None:
+    """Span a generator (from a basic iterator function)."""
 
     @wtt.spanned()
     def _gen() -> Generator[int, None, None]:
@@ -200,6 +200,41 @@ def example_30_iter_a_generator() -> None:
         time.sleep(0.25)
 
     for num in _gen():
+        print(num)
+        time.sleep(0.25)
+
+
+@wtt.spanned()
+def example_31_iter_a_generator_class() -> None:
+    """Span a generator (from a generator class instance)."""
+
+    class Fib:
+        """Fibonacci generator-iterator."""
+
+        def __init__(self, max: int) -> None:
+            self.a, self.b = 0, 1
+            self.max = 5
+            self.i = 0
+
+        @wtt.spanned()
+        def __next__(self) -> int:
+            if self.max == self.i:
+                raise StopIteration
+            return_value = self.a
+            self.a, self.b = self.b, self.a + self.b
+            self.i += 1
+            return return_value
+
+        @wtt.spanned()
+        def __iter__(self) -> "Fib":
+            return self
+
+    gen = Fib(5)
+    for num in gen:
+        print(num)
+        time.sleep(0.25)
+
+    for num in Fib(5):
         print(num)
         time.sleep(0.25)
 
@@ -294,5 +329,8 @@ if __name__ == "__main__":
     logging.warning("EXAMPLE #20 - NESTED ASYNC")
     asyncio.get_event_loop().run_until_complete(example_20_async())
 
-    logging.warning("EXAMPLE #30 - GENERATOR")
-    example_30_iter_a_generator()
+    logging.warning("EXAMPLE #30 - GENERATOR FUNCTION")
+    example_30_iter_a_generator_function()
+
+    logging.warning("EXAMPLE #31 - GENERATOR CLASS")
+    example_31_iter_a_generator_class()
