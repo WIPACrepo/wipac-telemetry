@@ -273,7 +273,7 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Async Function")
             span = setup(args, kwargs)
-            is_iterator_class_anext_method = span.name.endswith(".__anext__")
+            is_iterator_class_anext_method = span.name.endswith(".__aaanext__")
             reraise_stopasynciteration_outside_contextmanager = False
 
             # CASE 1 ----------------------------------------------------------
