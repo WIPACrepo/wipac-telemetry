@@ -193,15 +193,15 @@ class _ReuseSpanConductor(_SpanConductor):
 ########################################################################################
 
 
-def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
+def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
     """Handle decorating a function with either a new span or a reused span."""
 
     def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
         def setup(args: Args, kwargs: Kwargs) -> Span:
-            if not isinstance(conductor, (_NewSpanConductor, _ReuseSpanConductor)):
-                raise Exception(f"Undefined SpanConductor type: {conductor}.")
+            if not isinstance(scond, (_NewSpanConductor, _ReuseSpanConductor)):
+                raise Exception(f"Undefined SpanConductor type: {scond}.")
             else:
-                return conductor.get_span(FunctionInspector(func, args, kwargs))
+                return scond.get_span(FunctionInspector(func, args, kwargs))
 
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -211,7 +211,7 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
             reraise_stopiteration_outside_contextmanager = False
 
             # CASE 1 ----------------------------------------------------------
-            if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
+            if scond.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with use_span(span, end_on_exit=False):
                         try:
@@ -227,23 +227,10 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
                 if reraise_stopiteration_outside_contextmanager:
                     raise StopIteration
                 raise RuntimeError("Malformed SpanBehavior Handling")
-            # CASE 2 ----------------------------------------------------------
-            elif conductor.behavior == SpanBehavior.END_ON_EXIT:
-                with use_span(span, end_on_exit=True):
-                    try:
-                        return func(*args, **kwargs)
-                    except StopIteration:
-                        # intercept and temporarily suppress StopIteration
-                        if not is_iterator_class_next_method:
-                            raise
-                        reraise_stopiteration_outside_contextmanager = True
-                if reraise_stopiteration_outside_contextmanager:
-                    raise StopIteration
-                raise RuntimeError("Malformed SpanBehavior Handling")
-            # CASE 3 ----------------------------------------------------------
-            # NOTE: logic is identical to above case, except end behavior
-            elif conductor.behavior == SpanBehavior.DONT_END:
-                with use_span(span, end_on_exit=False):
+            # CASES 2 & 3 -----------------------------------------------------
+            elif scond.behavior in (SpanBehavior.END_ON_EXIT, SpanBehavior.DONT_END):
+                end_on_exit = bool(scond.behavior == SpanBehavior.END_ON_EXIT)
+                with use_span(span, end_on_exit=end_on_exit):
                     try:
                         return func(*args, **kwargs)
                     except StopIteration:
@@ -256,7 +243,7 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
                 raise RuntimeError("Malformed SpanBehavior Handling")
             # ELSE ------------------------------------------------------------
             else:
-                raise InvalidSpanBehavior(conductor.behavior)
+                raise InvalidSpanBehavior(scond.behavior)
 
         @wraps(func)
         def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -264,7 +251,7 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
             span = setup(args, kwargs)
 
             # CASE 1 ----------------------------------------------------------
-            if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
+            if scond.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with use_span(span, end_on_exit=False):
                         for val in func(*args, **kwargs):
@@ -272,20 +259,15 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
-            # CASE 2 ----------------------------------------------------------
-            elif conductor.behavior == SpanBehavior.END_ON_EXIT:
-                with use_span(span, end_on_exit=True):
-                    for val in func(*args, **kwargs):
-                        yield val
-            # CASE 3 ----------------------------------------------------------
-            # NOTE: logic is identical to above case, except end behavior
-            elif conductor.behavior == SpanBehavior.DONT_END:
-                with use_span(span, end_on_exit=False):
+            # CASES 2 & 3 -----------------------------------------------------
+            elif scond.behavior in (SpanBehavior.END_ON_EXIT, SpanBehavior.DONT_END):
+                end_on_exit = bool(scond.behavior == SpanBehavior.END_ON_EXIT)
+                with use_span(span, end_on_exit=end_on_exit):
                     for val in func(*args, **kwargs):
                         yield val
             # ELSE ------------------------------------------------------------
             else:
-                raise InvalidSpanBehavior(conductor.behavior)
+                raise InvalidSpanBehavior(scond.behavior)
 
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -293,7 +275,7 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
             span = setup(args, kwargs)
 
             # CASE 1 ----------------------------------------------------------
-            if conductor.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
+            if scond.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with use_span(span, end_on_exit=False):
                         return await func(*args, **kwargs)
@@ -301,17 +283,17 @@ def _spanned(conductor: _SpanConductor) -> Callable[..., Any]:
                     span.end()
                     raise
             # CASE 2 ----------------------------------------------------------
-            elif conductor.behavior == SpanBehavior.END_ON_EXIT:
+            elif scond.behavior == SpanBehavior.END_ON_EXIT:
                 with use_span(span, end_on_exit=True):
                     return await func(*args, **kwargs)
             # CASE 3 ----------------------------------------------------------
             # NOTE: logic is identical to above case, except end behavior
-            elif conductor.behavior == SpanBehavior.DONT_END:
+            elif scond.behavior == SpanBehavior.DONT_END:
                 with use_span(span, end_on_exit=False):
                     return await func(*args, **kwargs)
             # ELSE ------------------------------------------------------------
             else:
-                raise InvalidSpanBehavior(conductor.behavior)
+                raise InvalidSpanBehavior(scond.behavior)
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
