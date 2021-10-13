@@ -273,24 +273,40 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Async Function")
             span = setup(args, kwargs)
+            is_iterator_class_anext_method = span.name.endswith(".__anext__")
+            reraise_stopasynciteration_outside_contextmanager = False
 
             # CASE 1 ----------------------------------------------------------
             if scond.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with use_span(span, end_on_exit=False):
-                        return await func(*args, **kwargs)
+                        try:
+                            return await func(*args, **kwargs)
+                        except StopAsyncIteration:
+                            # intercept and temporarily suppress StopAsyncIteration
+                            if not is_iterator_class_anext_method:
+                                raise
+                            reraise_stopasynciteration_outside_contextmanager = True
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
                     raise
-            # CASE 2 ----------------------------------------------------------
-            elif scond.behavior == SpanBehavior.END_ON_EXIT:
-                with use_span(span, end_on_exit=True):
-                    return await func(*args, **kwargs)
-            # CASE 3 ----------------------------------------------------------
-            # NOTE: logic is identical to above case, except end behavior
-            elif scond.behavior == SpanBehavior.DONT_END:
-                with use_span(span, end_on_exit=False):
-                    return await func(*args, **kwargs)
+                if reraise_stopasynciteration_outside_contextmanager:
+                    raise StopAsyncIteration
+                raise RuntimeError("Malformed SpanBehavior Handling")
+            # CASES 2 & 3 -----------------------------------------------------
+            elif scond.behavior in (SpanBehavior.END_ON_EXIT, SpanBehavior.DONT_END):
+                end_on_exit = bool(scond.behavior == SpanBehavior.END_ON_EXIT)
+                with use_span(span, end_on_exit=end_on_exit):
+                    try:
+                        return await func(*args, **kwargs)
+                    except StopAsyncIteration:
+                        # intercept and temporarily suppress StopAsyncIteration
+                        if not is_iterator_class_anext_method:
+                            raise
+                        reraise_stopasynciteration_outside_contextmanager = True
+                if reraise_stopasynciteration_outside_contextmanager:
+                    raise StopAsyncIteration
+                raise RuntimeError("Malformed SpanBehavior Handling")
             # ELSE ------------------------------------------------------------
             else:
                 raise InvalidSpanBehavior(scond.behavior)
