@@ -2,11 +2,12 @@
 
 
 import asyncio
+import itertools as it
 import logging
 import os
 import sys
 import time
-from typing import Dict, Generator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 import coloredlogs  # type: ignore[import]
 
@@ -186,21 +187,165 @@ async def example_20_async() -> None:
 
 
 @wtt.spanned()
-def example_30_iter_a_generator() -> None:
-    """Span a generator."""
+def example_30_iter_an_iterator_function() -> None:
+    """Span an iterator (from a basic iterator function)."""
 
-    @wtt.spanned()
-    def _gen() -> Generator[int, None, None]:
-        for i in range(5):
-            yield i
+    @wtt.spanned(these=["name"])
+    def _gen(name: str) -> Iterator[int]:
+        # pylint: disable=invalid-name
+        a, b = 0, 1
+        for _ in range(5):
+            ret = a
+            a, b = b, a + b
+            yield ret
 
-    gen = _gen()
-    for num in gen:
-        print(num)
+    name = "function-return variable w/ loop"
+    logging.debug(f"---{name}---")
+    gen = _gen(name)
+    for i, num in enumerate(gen):
+        print(f"#{i} :: {num}")
         time.sleep(0.25)
 
-    for num in _gen():
-        print(num)
+    name = "function-return directly w/ loop"
+    logging.debug(f"---{name}---")
+    for i, num in enumerate(_gen(name)):
+        print(f"#{i} :: {num}")
+        time.sleep(0.25)
+
+    @wtt.spanned()
+    def wrap_manual_iter(gen: Iterator[int]) -> Any:
+        # will record as "Error" for OpenTelemetry on StopIteration
+        # but **NOT** on `gen`'s trace(s)
+        return next(gen)
+
+    name = "function-return variable w/ next()"
+    logging.debug(f"---{name}---")
+    # will record as "Error" for OpenTelemetry
+    gen = _gen(name)
+    for i in it.count(0):
+        try:
+            num = wrap_manual_iter(gen)
+        except StopIteration:
+            break
+        print(f"#{i} :: {num}")
+        time.sleep(0.25)
+
+
+@wtt.spanned()
+def example_31_iter_an_iterator_class() -> None:
+    """Span an iterator (from an iterator class instance)."""
+
+    class Fib:
+        """Fibonacci iterator object."""
+
+        def __init__(self, name: str, maximum: int) -> None:
+            self.a, self.b = 0, 1  # pylint: disable=invalid-name
+            self.max = maximum
+            self.i = 0
+            self.name = name
+
+        @wtt.spanned(these=["self.name"])
+        def __next__(self) -> int:
+            if self.max == self.i:
+                raise StopIteration
+            return_value = self.a
+            self.a, self.b = self.b, self.a + self.b
+            self.i += 1
+            return return_value
+
+        @wtt.spanned()
+        def __iter__(self) -> "Fib":
+            return self
+
+    name = "class-instance variable w/ loop"
+    logging.debug(f"---{name}---")
+    gen = Fib(name, 5)
+    for i, num in enumerate(gen):
+        print(f"#{i} :: {num}")
+        time.sleep(0.25)
+
+    name = "class-instance directly w/ loop"
+    logging.debug(f"---{name}---")
+    for i, num in enumerate(Fib(name, 5)):
+        print(f"#{i} :: {num}")
+        time.sleep(0.25)
+
+    @wtt.spanned()
+    def wrap_manual_iter(gen: Fib) -> Any:
+        # will record as "Error" for OpenTelemetry on StopIteration
+        # but **NOT** on __next__()'s trace
+        return next(gen)
+
+    name = "class-instance variable w/ next()"
+    logging.debug(f"---{name}---")
+    gen = Fib(name, 5)
+    for i in it.count(0):
+        try:
+            num = wrap_manual_iter(gen)
+        except StopIteration:
+            break
+        print(f"#{i} :: {num}")
+        time.sleep(0.25)
+
+
+@wtt.spanned()
+async def example_32_iter_an_async_iterator_class() -> None:
+    """Span an iterator (from an iterator class instance)."""
+
+    class Fib:
+        """Fibonacci iterator object."""
+
+        def __init__(self, name: str, maximum: int) -> None:
+            self.a, self.b = 0, 1  # pylint: disable=invalid-name
+            self.max = maximum
+            self.i = 0
+            self.name = name
+
+        @wtt.spanned(these=["self.name"])
+        async def __anext__(self) -> int:
+            if self.max == self.i:
+                raise StopAsyncIteration
+            return_value = self.a
+            self.a, self.b = self.b, self.a + self.b
+            self.i += 1
+            return return_value
+
+        @wtt.spanned()
+        def __aiter__(self) -> "Fib":
+            return self
+
+    name = "async class-instance variable w/ loop"
+    logging.debug(f"---{name}---")
+    gen = Fib(name, 5)
+    i = 0
+    async for num in gen:
+        print(f"#{i} :: {num}")
+        time.sleep(0.25)
+        i += 1
+
+    name = "async class-instance directly w/ loop"
+    logging.debug(f"---{name}---")
+    i = 0
+    async for num in Fib(name, 5):
+        print(f"#{i} :: {num}")
+        time.sleep(0.25)
+        i += 1
+
+    @wtt.spanned()
+    async def wrap_manual_iter(gen: Fib) -> Any:
+        # will record as "Error" for OpenTelemetry on StopAsyncIteration
+        # but **NOT** on __anext__()'s trace
+        return await gen.__anext__()
+
+    name = "async class-instance variable w/ __anext__()"
+    logging.debug(f"---{name}---")
+    gen = Fib(name, 5)
+    for i in it.count(0):
+        try:
+            num = await wrap_manual_iter(gen)
+        except StopAsyncIteration:
+            break
+        print(f"#{i} :: {num}")
         time.sleep(0.25)
 
 
@@ -294,5 +439,13 @@ if __name__ == "__main__":
     logging.warning("EXAMPLE #20 - NESTED ASYNC")
     asyncio.get_event_loop().run_until_complete(example_20_async())
 
-    logging.warning("EXAMPLE #30 - GENERATOR")
-    example_30_iter_a_generator()
+    logging.warning("EXAMPLE #30 - ITERATOR FUNCTION")
+    example_30_iter_an_iterator_function()
+
+    logging.warning("EXAMPLE #31 - ITERATOR CLASS")
+    example_31_iter_an_iterator_class()
+
+    logging.warning("EXAMPLE #32 - ASYNC ITERATOR CLASS")
+    asyncio.get_event_loop().run_until_complete(
+        example_32_iter_an_async_iterator_class()
+    )
