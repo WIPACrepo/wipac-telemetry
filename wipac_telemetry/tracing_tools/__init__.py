@@ -1,6 +1,9 @@
 """Init."""
 
 
+import os
+import sys
+
 # from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import]
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[import]
     OTLPSpanExporter,
@@ -48,9 +51,26 @@ __all__ = [
     "spanned",
 ]
 
+
 # Config SDK ###########################################################################
 
-set_tracer_provider(TracerProvider(resource=Resource.create({SERVICE_NAME: __name__})))
+main_mod_abspath = os.path.abspath(sys.modules["__main__"].__file__)
+if main_mod_abspath.endswith("/__main__.py"):
+    # this means client is running as a module, so use the directory's name
+    common_name = main_mod_abspath.split("/")[-2]  # ex: 'mymodule'
+    # keep the parent path for reference
+    reference_name = main_mod_abspath.rstrip(f"/{common_name}/__main__.py")
+else:
+    # otherwise, client is running as a script, so use the file's name
+    common_name = main_mod_abspath.split("/")[-1]  # ex: 'myscript.py'
+    # keep the parent path for reference
+    reference_name = main_mod_abspath.rstrip(f"/{common_name}")
+
+set_tracer_provider(
+    TracerProvider(
+        resource=Resource.create({SERVICE_NAME: f"{common_name} ({reference_name})"})
+    )
+)
 
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
