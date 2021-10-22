@@ -13,14 +13,7 @@ except ImportError:
     from typing_extensions import Final, TypedDict  # type: ignore[misc]
 
 from opentelemetry.propagate import extract
-from opentelemetry.trace import (
-    Span,
-    SpanKind,
-    get_current_span,
-    get_tracer,
-    status,
-    use_span,
-)
+from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, use_span
 from opentelemetry.util import types
 
 from .propagations import extract_links_carrier

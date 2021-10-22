@@ -5,6 +5,7 @@
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[import]
     OTLPSpanExporter,
 )
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
 from opentelemetry.sdk.trace.export import (  # type: ignore[import]
     BatchSpanProcessor,
@@ -49,7 +50,8 @@ __all__ = [
 
 # Config SDK ###########################################################################
 
-set_tracer_provider(TracerProvider())
+set_tracer_provider(TracerProvider(resource=Resource.create({SERVICE_NAME: __name__})))
+
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
     get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
