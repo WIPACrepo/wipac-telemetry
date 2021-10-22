@@ -16,6 +16,9 @@ for fpath in `find examples/wipac_tracing/ -name '*.py'`; do
 done
 
 echo $divider
+python -m examples.wipac_tracing.a_traced_module
+
+echo $divider
 echo "examples/wipac_tracing/span_client_server_http.py"
 python examples/wipac_tracing/span_client_server_http.py server &
 python examples/wipac_tracing/span_client_server_http.py client &
