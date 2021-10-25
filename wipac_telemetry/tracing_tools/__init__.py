@@ -23,6 +23,7 @@ from opentelemetry.trace import (  # noqa
     get_tracer_provider,
     set_tracer_provider,
 )
+from wipac_dev_tools import SetupShop
 
 from .config import CONFIG
 from .events import add_event, evented  # noqa
@@ -56,20 +57,19 @@ __all__ = [
 
 main_mod_abspath = os.path.abspath(sys.modules["__main__"].__file__)
 if main_mod_abspath.endswith("/__main__.py"):
-    # this means client is running as a module, so use the directory's name
-    common_name = main_mod_abspath.split("/")[-2]  # ex: 'mymodule'
-    # keep the parent path for reference
-    reference_name = main_mod_abspath.rstrip(f"/{common_name}/__main__.py")
+    # this means client is running as a module, so get the full package name + version
+    name = main_mod_abspath.rstrip("__main__.py").split("/")[-1]
+    here = main_mod_abspath.rstrip(f"/{name}/__main__.py")
+    version = SetupShop._get_version(here, name)  # pylint:disable=protected-access
+    service_name = f"{sys.modules['__main__'].__package__} (v{version})"
 else:
-    # otherwise, client is running as a script, so use the file's name
-    common_name = main_mod_abspath.split("/")[-1]  # ex: 'myscript.py'
-    # keep the parent path for reference
-    reference_name = main_mod_abspath.rstrip(f"/{common_name}")
+    # otherwise, client is running as a script, so use the file's name + dir path
+    script = main_mod_abspath.split("/")[-1]  # ex: 'myscript.py'
+    script_dir_abspath = main_mod_abspath.rstrip(f"/{script}")
+    service_name = f"{script} ({script_dir_abspath})"
 
 set_tracer_provider(
-    TracerProvider(
-        resource=Resource.create({SERVICE_NAME: f"{common_name} ({reference_name})"})
-    )
+    TracerProvider(resource=Resource.create({SERVICE_NAME: service_name}))
 )
 
 
