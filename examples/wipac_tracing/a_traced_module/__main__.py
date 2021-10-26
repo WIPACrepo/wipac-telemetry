@@ -16,7 +16,7 @@ sys.path.append(".")
 import wipac_telemetry.tracing_tools as wtt  # noqa: E402 # pylint: disable=C0413,E0401
 
 
-# @wtt.spanned()
+@wtt.spanned()
 def main() -> None:
     """Start up application context."""
     a_function()
