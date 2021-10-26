@@ -1,6 +1,7 @@
 """Init."""
 
 
+import hashlib
 import os
 import sys
 
@@ -57,7 +58,7 @@ __all__ = [
 
 
 def get_service_name() -> str:
-    """Build the service name from module/file auto-detection."""
+    """Build the service name from module/script auto-detection."""
     main_mod_abspath = os.path.abspath(sys.modules["__main__"].__file__)
     if main_mod_abspath.endswith("/__main__.py"):
         # this means client is running as a module, so get the full package name + version
@@ -67,10 +68,11 @@ def get_service_name() -> str:
         version = ".".join([x.zfill(2) for x in version.split(".")])  # ex: 01.02.03
         service_name = f"{sys.modules['__main__'].__package__} (v{version})"
     else:
-        # otherwise, client is running as a script, so use the file's name + dir path
+        # otherwise, client is running as a script, so use the file's name
         script = main_mod_abspath.split("/")[-1]  # ex: 'myscript.py'
-        script_dir_abspath = main_mod_abspath.rstrip(f"/{script}")
-        service_name = f"{script} ({script_dir_abspath})"
+        with open(main_mod_abspath, "rb") as f:
+            readable_hash = hashlib.sha256(f.read()).hexdigest()
+        service_name = f"./{script} ({readable_hash[-4:]})"
 
     return service_name
 
