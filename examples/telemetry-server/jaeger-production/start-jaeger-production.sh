@@ -3,8 +3,7 @@
 # Start a Jaeger OpenTelemetry telemetry service in Docker
 
 # ensure that we're being run from the correct spot for volume mounts
-CHECK_SCRIPT_HERE=$(which start-jaeger-production.sh)
-if [ -z "$CHECK_SCRIPT_HERE" ]; then
+if [ `dirname $0` != "." ]; then
    echo "Please run $(basename $0) from the directory $(pwd)/$(dirname $0)"
    exit 1
 fi
