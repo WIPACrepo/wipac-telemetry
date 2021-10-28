@@ -1,10 +1,15 @@
 """Init."""
 
 
+import hashlib
+import os
+import sys
+
 # from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import]
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[import]
     OTLPSpanExporter,
 )
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
 from opentelemetry.sdk.trace.export import (  # type: ignore[import]
     BatchSpanProcessor,
@@ -19,6 +24,7 @@ from opentelemetry.trace import (  # noqa
     get_tracer_provider,
     set_tracer_provider,
 )
+from wipac_dev_tools import SetupShop
 
 from .config import CONFIG
 from .events import add_event, evented  # noqa
@@ -47,9 +53,34 @@ __all__ = [
     "spanned",
 ]
 
+
 # Config SDK ###########################################################################
 
-set_tracer_provider(TracerProvider())
+
+def get_service_name() -> str:
+    """Build the service name from module/script auto-detection."""
+    main_mod_abspath = os.path.abspath(sys.modules["__main__"].__file__)
+    if main_mod_abspath.endswith("/__main__.py"):
+        # this means client is running as a module, so get the full package name + version
+        name = main_mod_abspath.rstrip("__main__.py").split("/")[-1]
+        here = main_mod_abspath.rstrip(f"/{name}/__main__.py")
+        version = SetupShop._get_version(here, name)  # pylint:disable=protected-access
+        version = ".".join([x.zfill(2) for x in version.split(".")])  # ex: 01.02.03
+        service_name = f"{sys.modules['__main__'].__package__} (v{version})"
+    else:
+        # otherwise, client is running as a script, so use the file's name
+        script = main_mod_abspath.split("/")[-1]  # ex: 'myscript.py'
+        with open(main_mod_abspath, "rb") as f:
+            readable_hash = hashlib.sha256(f.read()).hexdigest()
+        service_name = f"./{script} ({readable_hash[-4:]})"
+
+    return service_name
+
+
+set_tracer_provider(
+    TracerProvider(resource=Resource.create({SERVICE_NAME: get_service_name()}))
+)
+
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
     get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
