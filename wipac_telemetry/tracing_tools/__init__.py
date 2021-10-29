@@ -1,6 +1,7 @@
 """Init."""
 
 
+import datetime
 import hashlib
 import os
 import sys
@@ -64,9 +65,14 @@ def get_service_name() -> str:
         # this means client is running as a module, so get the full package name + version
         name = main_mod_abspath.rstrip("__main__.py").split("/")[-1]
         here = main_mod_abspath.rstrip(f"/{name}/__main__.py")
-        version = SetupShop._get_version(here, name)  # pylint:disable=protected-access
-        version = ".".join([x.zfill(2) for x in version.split(".")])  # ex: 01.02.03
-        service_name = f"{sys.modules['__main__'].__package__} (v{version})"
+        try:
+            # pylint:disable=protected-access
+            version = SetupShop._get_version(here, name)
+            version = ".".join([x.zfill(2) for x in version.split(".")])  # ex: 01.02.03
+            version = "v" + version
+        except:  # noqa: E722 # pylint:disable=bare-except
+            version = datetime.date.today().isoformat()
+        service_name = f"{sys.modules['__main__'].__package__} ({version})"
     else:
         # otherwise, client is running as a script, so use the file's name
         script = main_mod_abspath.split("/")[-1]  # ex: 'myscript.py'
