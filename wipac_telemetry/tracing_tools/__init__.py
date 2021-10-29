@@ -27,7 +27,7 @@ from opentelemetry.trace import (  # noqa
 )
 from wipac_dev_tools import SetupShop
 
-from .config import CONFIG
+from .config import CONFIG, LOGGER
 from .events import add_event, evented  # noqa
 from .propagations import (  # noqa
     extract_links_carrier,
@@ -54,7 +54,6 @@ __all__ = [
     "spanned",
 ]
 
-_LOGGER = logging.getLogger("wipactel")
 
 # Config SDK ###########################################################################
 
@@ -62,7 +61,7 @@ _LOGGER = logging.getLogger("wipactel")
 def get_service_name() -> str:
     """Build the service name from module/script auto-detection."""
     main_mod_abspath = os.path.abspath(sys.modules["__main__"].__file__)
-    _LOGGER.debug(f"Detecting Service Name from `{main_mod_abspath}`...")
+    LOGGER.debug(f"Detecting Service Name from `{main_mod_abspath}`...")
 
     if main_mod_abspath.endswith("/__main__.py"):
         # this means client is running as a module, so get the full package name + version
@@ -83,27 +82,25 @@ def get_service_name() -> str:
             readable_hash = hashlib.sha256(f.read()).hexdigest()
         service_name = f"./{script} ({readable_hash[-4:]})"
 
-    _LOGGER.debug(f"Using Service Name: {service_name}...")
+    LOGGER.debug(f"Using Service Name: {service_name}...")
     return service_name
 
 
-_LOGGER.info("Setting Tracer Provider...")
+LOGGER.info("Setting Tracer Provider...")
 set_tracer_provider(
     TracerProvider(resource=Resource.create({SERVICE_NAME: get_service_name()}))
 )
 
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
-    _LOGGER.info("Adding ConsoleSpanExporter...")
+    LOGGER.info("Adding ConsoleSpanExporter...")
     get_tracer_provider().add_span_processor(
         # output to stdout
         SimpleSpanProcessor(ConsoleSpanExporter())
     )
 
 if CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
-    _LOGGER.info(
-        f"Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})..."
-    )
+    LOGGER.info(f"Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})...")
     get_tracer_provider().add_span_processor(
         # relies on env variables
         # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
