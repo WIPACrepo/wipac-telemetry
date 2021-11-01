@@ -93,6 +93,11 @@ def get_service_name() -> str:
             readable_hash = hashlib.sha256(f.read()).hexdigest()
         service_name = f"./{script} ({readable_hash[-4:]})"
 
+    # check if user supplied a prefix
+    if CONFIG["WIPACTEL_SERVICE_NAME_PREFIX"]:
+        _pseudo_log(f"with prefix: \"{CONFIG['WIPACTEL_SERVICE_NAME_PREFIX']}\"")
+        service_name = f"{CONFIG['WIPACTEL_SERVICE_NAME_PREFIX']}.{service_name}"
+
     _pseudo_log(f'Using Service Name: "{service_name}"')
     return service_name
 
