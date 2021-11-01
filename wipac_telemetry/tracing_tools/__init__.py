@@ -2,6 +2,7 @@
 
 import datetime
 import hashlib
+import logging
 import os
 import sys
 
@@ -55,9 +56,6 @@ __all__ = [
 
 
 # Config SDK ###########################################################################
-
-# FIXME - logging isn't logged!
-assert 0
 
 
 def get_service_name() -> str:
