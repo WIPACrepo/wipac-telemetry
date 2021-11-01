@@ -2,7 +2,6 @@
 
 import datetime
 import hashlib
-import logging
 import os
 import sys
 
@@ -56,6 +55,8 @@ __all__ = [
 
 
 # Config SDK ###########################################################################
+
+print(LOGGER)
 
 
 def get_service_name() -> str:
