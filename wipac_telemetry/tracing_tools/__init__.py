@@ -67,9 +67,9 @@ def get_service_name() -> str:
         main_mod_abspath = os.path.abspath(sys.modules["__main__"].__file__)
     except AttributeError as e:
         raise RuntimeError(
-            "Telemetry service started up before '__main__' was set. "
+            "WIPAC Telemetry service started up before '__main__' was set. "
             "Do you have imports in your package's base '__init__.py'? "
-            "If so, remove those."
+            "If so, remove them; one of these is likely prematurely calling this library."
         ) from e
     _pseudo_log(f"Detecting Service Name from `{main_mod_abspath}`...")
 
