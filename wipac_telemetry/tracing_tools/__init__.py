@@ -57,6 +57,9 @@ __all__ = [
 # Config SDK ###########################################################################
 
 print(LOGGER)
+import logging
+
+logging.critical(LOGGER)
 
 
 def get_service_name() -> str:
