@@ -58,7 +58,7 @@ __all__ = [
 
 
 def _pseudo_log(msg: str) -> None:
-    print(f"[wipac-telemetry-setup] : {msg}", file=sys.stderr)
+    print(f"[wipac-telemetry-setup] {msg}", file=sys.stderr)
 
 
 def get_service_name() -> str:
@@ -85,7 +85,7 @@ def get_service_name() -> str:
             readable_hash = hashlib.sha256(f.read()).hexdigest()
         service_name = f"./{script} ({readable_hash[-4:]})"
 
-    _pseudo_log(f"Using Service Name: {service_name}...")
+    _pseudo_log(f'Using Service Name: "{service_name}"')
     return service_name
 
 
@@ -96,14 +96,14 @@ set_tracer_provider(
 
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
-    _pseudo_log("Adding ConsoleSpanExporter...")
+    _pseudo_log("Adding ConsoleSpanExporter")
     get_tracer_provider().add_span_processor(
         # output to stdout
         SimpleSpanProcessor(ConsoleSpanExporter())
     )
 
 if CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
-    _pseudo_log(f"Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})...")
+    _pseudo_log(f"Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})")
     get_tracer_provider().add_span_processor(
         # relies on env variables
         # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
@@ -121,3 +121,5 @@ if CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
         # OTEL_EXPORTER_OTLP_CERTIFICATE
         BatchSpanProcessor(OTLPSpanExporter())
     )
+
+_pseudo_log("Setup complete.")
