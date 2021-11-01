@@ -63,7 +63,14 @@ def _pseudo_log(msg: str) -> None:
 
 def get_service_name() -> str:
     """Build the service name from module/script auto-detection."""
-    main_mod_abspath = os.path.abspath(sys.modules["__main__"].__file__)
+    try:
+        main_mod_abspath = os.path.abspath(sys.modules["__main__"].__file__)
+    except AttributeError as e:
+        raise RuntimeError(
+            "Telemetry service started up before '__main__' was set. "
+            "Do you have imports in your package's base '__init__.py'? "
+            "If so, remove those."
+        ) from e
     _pseudo_log(f"Detecting Service Name from `{main_mod_abspath}`...")
 
     if main_mod_abspath.endswith("/__main__.py"):
