@@ -69,7 +69,8 @@ def get_service_name() -> str:
         raise RuntimeError(
             "WIPAC Telemetry service started up before '__main__' was set. "
             "Do you have imports in your package's base '__init__.py'? "
-            "If so, remove them; one of these is likely prematurely calling this library."
+            "If so, remove them; one of these likely prematurely called "
+            "this library before '__main__.py' was executed."
         ) from e
     _pseudo_log(f"Detecting Service Name from `{main_mod_abspath}`...")
 
