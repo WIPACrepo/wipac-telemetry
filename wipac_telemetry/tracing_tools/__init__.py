@@ -62,7 +62,9 @@ print(LOGGER)
 def get_service_name() -> str:
     """Build the service name from module/script auto-detection."""
     main_mod_abspath = os.path.abspath(sys.modules["__main__"].__file__)
-    LOGGER.debug(f"Detecting Service Name from `{main_mod_abspath}`...")
+    print(
+        f"DEBUG: Detecting Service Name from `{main_mod_abspath}`...", file=sys.stderr
+    )
 
     if main_mod_abspath.endswith("/__main__.py"):
         # this means client is running as a module, so get the full package name + version
@@ -83,25 +85,28 @@ def get_service_name() -> str:
             readable_hash = hashlib.sha256(f.read()).hexdigest()
         service_name = f"./{script} ({readable_hash[-4:]})"
 
-    LOGGER.debug(f"Using Service Name: {service_name}...")
+    print(f"DEBUG: Using Service Name: {service_name}...", file=sys.stderr)
     return service_name
 
 
-LOGGER.info("Setting Tracer Provider...")
+print("INFO: Setting Tracer Provider...", file=sys.stderr)
 set_tracer_provider(
     TracerProvider(resource=Resource.create({SERVICE_NAME: get_service_name()}))
 )
 
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
-    LOGGER.info("Adding ConsoleSpanExporter...")
+    print("INFO: Adding ConsoleSpanExporter...", file=sys.stderr)
     get_tracer_provider().add_span_processor(
         # output to stdout
         SimpleSpanProcessor(ConsoleSpanExporter())
     )
 
 if CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
-    LOGGER.info(f"Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})...")
+    print(
+        "INFO: Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})...",
+        file=sys.stderr,
+    )
     get_tracer_provider().add_span_processor(
         # relies on env variables
         # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
