@@ -26,7 +26,7 @@ from opentelemetry.trace import (  # noqa
 )
 from wipac_dev_tools import SetupShop
 
-from .config import CONFIG, LOGGER
+from .config import CONFIG
 from .events import add_event, evented  # noqa
 from .propagations import (  # noqa
     extract_links_carrier,
@@ -56,18 +56,15 @@ __all__ = [
 
 # Config SDK ###########################################################################
 
-print(LOGGER)
-import logging
 
-logging.critical(LOGGER)
+def _pseudo_log(msg: str) -> None:
+    print(f"[wipac-telemetry-setup] : {msg}", file=sys.stderr)
 
 
 def get_service_name() -> str:
     """Build the service name from module/script auto-detection."""
     main_mod_abspath = os.path.abspath(sys.modules["__main__"].__file__)
-    print(
-        f"DEBUG: Detecting Service Name from `{main_mod_abspath}`...", file=sys.stderr
-    )
+    _pseudo_log(f"Detecting Service Name from `{main_mod_abspath}`...")
 
     if main_mod_abspath.endswith("/__main__.py"):
         # this means client is running as a module, so get the full package name + version
@@ -88,28 +85,25 @@ def get_service_name() -> str:
             readable_hash = hashlib.sha256(f.read()).hexdigest()
         service_name = f"./{script} ({readable_hash[-4:]})"
 
-    print(f"DEBUG: Using Service Name: {service_name}...", file=sys.stderr)
+    _pseudo_log(f"Using Service Name: {service_name}...")
     return service_name
 
 
-print("INFO: Setting Tracer Provider...", file=sys.stderr)
+_pseudo_log("Setting Tracer Provider...")
 set_tracer_provider(
     TracerProvider(resource=Resource.create({SERVICE_NAME: get_service_name()}))
 )
 
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
-    print("INFO: Adding ConsoleSpanExporter...", file=sys.stderr)
+    _pseudo_log("Adding ConsoleSpanExporter...")
     get_tracer_provider().add_span_processor(
         # output to stdout
         SimpleSpanProcessor(ConsoleSpanExporter())
     )
 
 if CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
-    print(
-        "INFO: Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})...",
-        file=sys.stderr,
-    )
+    _pseudo_log(f"Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})...")
     get_tracer_provider().add_span_processor(
         # relies on env variables
         # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
