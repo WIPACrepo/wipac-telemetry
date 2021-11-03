@@ -26,7 +26,6 @@ from opentelemetry.trace import (  # noqa
     get_tracer_provider,
     set_tracer_provider,
 )
-from wipac_dev_tools import SetupShop
 
 from .config import CONFIG
 from .events import add_event, evented  # noqa
