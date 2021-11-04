@@ -108,6 +108,9 @@ if CONFIG["WIPACTEL_EXPORT_STDOUT"] or CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
     set_tracer_provider(
         TracerProvider(resource=Resource.create({SERVICE_NAME: get_service_name()}))
     )
+else:
+    # tracing is "turned-off" but we still need a Tracer Provider b/c the decorators still fire
+    set_tracer_provider(TracerProvider())
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
     _pseudo_log("Adding ConsoleSpanExporter")
