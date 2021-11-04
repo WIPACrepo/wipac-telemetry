@@ -4,8 +4,8 @@ import datetime
 import hashlib
 import importlib
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import]
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[import]
@@ -62,19 +62,27 @@ def _pseudo_log(msg: str) -> None:
     print(f"[wipac-telemetry-setup] {msg}", file=sys.stderr)
 
 
+def _get_version(package: str) -> str:
+    """Get the version from the module; if that fails, grab today's date."""
+    try:
+        mod = importlib.import_module(package.split(".")[0])  # use base package name
+        triple = mod.version_info[:3]  # type: ignore[attr-defined]  # ex: (1,2,3)
+        version = "v" + ".".join(f"{x:02d}" for x in triple)  # ex: v01.02.03
+    except:  # noqa: E722 # pylint:disable=bare-except
+        version = datetime.date.today().isoformat()
+
+    return version
+
+
 def get_service_name() -> str:
     """Build the service name from module/script auto-detection."""
     main_mod = sys.modules["__main__"]
     package = getattr(main_mod, "__package__", False)
+
     if package:
         # this means client is running as a module, so get the full package name + version
         _pseudo_log(f"Detecting Service Name from `{package}`...")
-        try:
-            mod = importlib.import_module(package.split(".")[0])
-            version = ".".join(f"{x:02d}" for x in mod.version_info[:3])  # ex: 01.02.03
-            version = "v" + version
-        except:  # noqa: E722 # pylint:disable=bare-except
-            version = datetime.date.today().isoformat()
+        version = _get_version(package)
         service_name = f"{package} ({version})"
     else:
         # otherwise, client is running as a script, so use the file's name
