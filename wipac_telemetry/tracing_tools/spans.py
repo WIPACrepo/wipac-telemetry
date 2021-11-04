@@ -355,10 +355,10 @@ def spanned(
                         + use this when re-use is needed and an exception is NOT expected
         kind -- a `SpanKind` enum value
                 - `SpanKind.INTERNAL` - (default) normal, in-application spans
-                - `SpanKind.CLIENT` - spanned function makes outgoing cross-service requests
-                - `SpanKind.SERVER` - spanned function handles incoming cross-service requests
-                - `SpanKind.CONSUMER` - spanned function makes outgoing cross-service messages
-                - `SpanKind.PRODUCER` - spanned function handles incoming cross-service messages
+                - `SpanKind.CLIENT` - the spanned function sends cross-service requests
+                - `SpanKind.SERVER` - the spanned function receives cross-service requests (and may reply)
+                - `SpanKind.PRODUCER` - the spanned function sends cross-service messages
+                - `SpanKind.CONSUMER` - the spanned function receives cross-service messages
         carrier -- the name of the variable containing the carrier dict - useful for cross-process/service tracing
         carrier_relation -- a `CarrierRelation` enum value, used alongside `carrier`
                             - `CarrierRelation.SPAN_CHILD` - (default) for parent-child span relations
