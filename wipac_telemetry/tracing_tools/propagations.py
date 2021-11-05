@@ -60,7 +60,10 @@ def inject_links_carrier(
     if not carrier:
         carrier = {}
 
+    print(get_current_span().get_span_context())
+    print(convert_to_attributes(attrs))
     links = [Link(get_current_span().get_span_context(), convert_to_attributes(attrs))]
+    print(links)
 
     if addl_links:
         links.extend(addl_links)
