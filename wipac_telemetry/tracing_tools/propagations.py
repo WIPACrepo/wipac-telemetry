@@ -2,15 +2,39 @@
 
 
 import pickle
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
 from opentelemetry import propagate
 from opentelemetry.trace import Link, Span, get_current_span
 from opentelemetry.util import types
 
+from .config import LOGGER
 from .utils import convert_to_attributes
 
 _LINKS_KEY = "WIPAC-TEL-LINKS"
+
+
+class _LinkSerialization:
+    @staticmethod
+    def encode_links(links: List[Link]) -> bytes:
+        """Custom encoding for sending links."""
+        deconstructed = []
+        for link in links:
+            attrs = dict(link.attributes) if link.attributes else {}
+            LOGGER.debug(f"Encoding Link: {link.context} w/ {attrs}")
+            deconstructed.append((link.context, attrs))
+
+        return pickle.dumps(deconstructed)
+
+    @staticmethod
+    def decode_links(obj: Any) -> List[Link]:
+        """Counterpart decoding for receiving links."""
+        links = []
+        for span_context, attrs in pickle.loads(obj):
+            LOGGER.debug(f"Decoding Link: {span_context} w/ {attrs}")
+            links.append(Link(span_context, convert_to_attributes(attrs)))
+
+        return links
 
 
 def inject_span_carrier(carrier: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -29,6 +53,7 @@ def inject_span_carrier(carrier: Optional[Dict[str, Any]] = None) -> Dict[str, A
     if not carrier:
         carrier = {}
 
+    LOGGER.info(f"Injecting Span Carrier: {carrier}")
     propagate.inject(carrier)
 
     return carrier
@@ -60,12 +85,12 @@ def inject_links_carrier(
     if not carrier:
         carrier = {}
 
+    LOGGER.info(f"Injecting Links Carrier: {carrier}")
     links = [Link(get_current_span().get_span_context(), convert_to_attributes(attrs))]
-
     if addl_links:
         links.extend(addl_links)
 
-    carrier[_LINKS_KEY] = pickle.dumps(links)
+    carrier[_LINKS_KEY] = _LinkSerialization.encode_links(links)
 
     return carrier
 
@@ -75,8 +100,9 @@ def extract_links_carrier(carrier: Dict[str, Any]) -> List[Link]:
 
     If there is no link, then return empty list. Does not type-check.
     """
+    LOGGER.info(f"Extracting Links Carrier: {carrier}")
     try:
-        return cast(List[Link], pickle.loads(carrier[_LINKS_KEY]))
+        return _LinkSerialization.decode_links(carrier[_LINKS_KEY])
     except KeyError:
         return []
 

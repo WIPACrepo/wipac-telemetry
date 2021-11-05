@@ -3,6 +3,7 @@
 
 import logging
 import os
+import random
 import sys
 import time
 
@@ -18,7 +19,7 @@ import wipac_telemetry.tracing_tools as wtt  # noqa: E402 # pylint: disable=C041
 ADDRESS = "localhost"  # "127.0.0.1"
 PORT = 2000
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(f"{random.randint(0, 1000):04d}")
 
 
 ########################################################################################
@@ -56,7 +57,7 @@ def go_publish(
         properties=pika.BasicProperties(headers=headers),
     )
 
-    print(f" [x] Sent '{msg}'")
+    LOGGER.debug(f" [x] Sent '{msg}'")
 
 
 @wtt.spanned(all_args=True)
@@ -87,11 +88,11 @@ def receive_callback(
     body: bytes,
 ) -> None:
     """Handle received message."""
-    print(channel)
-    print(method)
-    print(properties)
-    print(properties.headers)
-    print(f" [x] Received '{str(body)}'")
+    LOGGER.debug(channel)
+    LOGGER.debug(method)
+    LOGGER.debug(properties)
+    LOGGER.debug(properties.headers)
+    LOGGER.debug(f" [x] Received '{str(body)}'")
     channel.stop_consuming()
 
 
@@ -132,6 +133,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    coloredlogs.install(level="DEBUG", logger=LOGGER)
+    coloredlogs.install(level="DEBUG")
+    logging.getLogger("pika").setLevel(logging.WARNING)
 
     main()
