@@ -5,8 +5,7 @@ import pickle
 from typing import Any, Dict, List, Optional
 
 from opentelemetry import propagate
-from opentelemetry.span import SpanContext
-from opentelemetry.trace import Link, Span, get_current_span
+from opentelemetry.trace import Link, Span, SpanContext, get_current_span
 from opentelemetry.util import types
 
 from .utils import convert_to_attributes
