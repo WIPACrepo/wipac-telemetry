@@ -19,6 +19,7 @@ class _LinkSerialization:
         """Custom encoding for sending links."""
         for lk in links:
             print(lk)
+            pickle.dumps(lk.context)
             pickle.dumps(int(lk.context.trace_id))
             pickle.dumps(int(lk.context.span_id))
             print(lk.attributes)
