@@ -62,11 +62,11 @@ def inject_links_carrier(
 
     print(get_current_span().get_span_context())
     print(convert_to_attributes(attrs))
-    # pickle.dumps(get_current_span().get_span_context())
+    pickle.dumps(get_current_span().get_span_context())
     print(
         dir(Link(get_current_span().get_span_context(), convert_to_attributes(attrs)))
     )
-    # pickle.dumps(
+    # pickle.dumps( # NOTE: THIS FAILS
     #     Link(get_current_span().get_span_context(), convert_to_attributes(attrs))
     # )
     links = [Link(get_current_span().get_span_context(), convert_to_attributes(attrs))]
@@ -75,8 +75,7 @@ def inject_links_carrier(
     if addl_links:
         links.extend(addl_links)
 
-    # carrier[_LINKS_KEY] = pickle.dumps(links)
-    carrier[_LINKS_KEY] = links
+    carrier[_LINKS_KEY] = pickle.dumps(links)
 
     return carrier
 
@@ -87,8 +86,7 @@ def extract_links_carrier(carrier: Dict[str, Any]) -> List[Link]:
     If there is no link, then return empty list. Does not type-check.
     """
     try:
-        # return cast(List[Link], pickle.loads(carrier[_LINKS_KEY]))
-        return cast(List[Link], carrier[_LINKS_KEY])
+        return cast(List[Link], pickle.loads(carrier[_LINKS_KEY]))
     except KeyError:
         return []
 
