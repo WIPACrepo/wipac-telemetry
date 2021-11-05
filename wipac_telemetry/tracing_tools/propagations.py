@@ -23,7 +23,6 @@ class _LinkSerialization:
             attrs = {}
             if link.attributes:
                 attrs = dict(link.attributes)
-            print(f"Encoding Link: {link.context} w/ {attrs}")
             LOGGER.debug(f"Encoding Link: {link.context} w/ {attrs}")
             deconstructed.append((link.context, attrs))
 
@@ -34,7 +33,6 @@ class _LinkSerialization:
         """Counterpart decoding for receiving links."""
         links = []
         for span_context, attrs in pickle.loads(obj):
-            print(f"Decoding Link: {span_context} w/ {attrs}")
             LOGGER.debug(f"Decoding Link: {span_context} w/ {attrs}")
             links.append(Link(span_context, convert_to_attributes(attrs)))
 
