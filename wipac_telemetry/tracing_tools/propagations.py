@@ -20,9 +20,7 @@ class _LinkSerialization:
         """Custom encoding for sending links."""
         deconstructed = []
         for link in links:
-            attrs = {}
-            if link.attributes:
-                attrs = dict(link.attributes)
+            attrs = dict(link.attributes) if link.attributes else {}
             LOGGER.debug(f"Encoding Link: {link.context} w/ {attrs}")
             deconstructed.append((link.context, attrs))
 
