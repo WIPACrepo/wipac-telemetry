@@ -21,7 +21,7 @@ class _LinkSerialization:
         deconstructed = []
         for link in links:
             attrs = dict(link.attributes) if link.attributes else {}
-            LOGGER.debug(f"Encoding Link: {link.context} w/ {attrs}")
+            LOGGER.critical(f"Encoding Link: {link.context} w/ {attrs}")
             deconstructed.append((link.context, attrs))
 
         return pickle.dumps(deconstructed)
