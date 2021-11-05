@@ -29,7 +29,7 @@ class _LinkSerialization:
             pickle.dumps(int(lk.context.trace_id))
             pickle.dumps(int(lk.context.span_id))
             print(lk.attributes)
-            pickle.dumps(lk.attributes)
+            # pickle.dumps(lk.attributes)
 
             print(attrs)
             encoded.append((lk.context, attrs))
