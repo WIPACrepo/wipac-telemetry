@@ -83,6 +83,7 @@ def inject_links_carrier(
     #     Link(get_current_span().get_span_context(), convert_to_attributes(attrs))
     # )
     links = [Link(get_current_span().get_span_context(), convert_to_attributes(attrs))]
+    print(dir(links[0].context))
     print(links)
 
     if addl_links:
