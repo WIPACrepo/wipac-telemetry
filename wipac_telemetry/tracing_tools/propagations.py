@@ -8,6 +8,7 @@ from opentelemetry import propagate
 from opentelemetry.trace import Link, Span, get_current_span
 from opentelemetry.util import types
 
+from .config import LOGGER
 from .utils import convert_to_attributes
 
 _LINKS_KEY = "WIPAC-TEL-LINKS"
@@ -17,33 +18,26 @@ class _LinkSerialization:
     @staticmethod
     def encode_links(links: List[Link]) -> bytes:
         """Custom encoding for sending links."""
-        encoded = []
-        for lk in links:
-            print(lk)
+        deconstructed = []
+        for link in links:
             attrs = {}
-            if lk.attributes:
-                for k, v in lk.attributes.items():
-                    attrs[k] = v
+            if link.attributes:
+                for key, val in link.attributes.items():
+                    attrs[key] = val
+            LOGGER.debug(f"Encoding Link: {link.context} w/ {attrs}")
+            deconstructed.append((link.context, attrs))
 
-            pickle.dumps(lk.context)
-            pickle.dumps(int(lk.context.trace_id))
-            pickle.dumps(int(lk.context.span_id))
-            print(lk.attributes)
-            # pickle.dumps(lk.attributes)
-
-            print(attrs)
-            encoded.append((lk.context, attrs))
-
-        return pickle.dumps(encoded)
+        return pickle.dumps(deconstructed)
 
     @staticmethod
     def decode_links(obj: Any) -> List[Link]:
         """Counterpart decoding for receiving links."""
-        tuples = pickle.loads(obj)
-        return [
-            Link(span_context, convert_to_attributes(attrs))
-            for span_context, attrs in tuples
-        ]
+        links = []
+        for span_context, attrs in pickle.loads(obj):
+            LOGGER.debug(f"Decoding Link: {span_context} w/ {attrs}")
+            links.append(Link(span_context, convert_to_attributes(attrs)))
+
+        return links
 
 
 def inject_span_carrier(carrier: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -62,6 +56,7 @@ def inject_span_carrier(carrier: Optional[Dict[str, Any]] = None) -> Dict[str, A
     if not carrier:
         carrier = {}
 
+    LOGGER.info(f"Injecting Span Carrier: {carrier}")
     propagate.inject(carrier)
 
     return carrier
@@ -93,20 +88,8 @@ def inject_links_carrier(
     if not carrier:
         carrier = {}
 
-    print(get_current_span().get_span_context())
-    print(convert_to_attributes(attrs))
-    pickle.dumps(get_current_span().get_span_context())
-    print(
-        dir(Link(get_current_span().get_span_context(), convert_to_attributes(attrs)))
-    )
-    # pickle.dumps( # NOTE: THIS FAILS
-    #     Link(get_current_span().get_span_context(), convert_to_attributes(attrs))
-    # )
+    LOGGER.info(f"Injecting Links Carrier: {carrier}")
     links = [Link(get_current_span().get_span_context(), convert_to_attributes(attrs))]
-    print(dir(links[0].context))
-    print(type(links[0].context))
-    print(links)
-
     if addl_links:
         links.extend(addl_links)
 
@@ -120,6 +103,7 @@ def extract_links_carrier(carrier: Dict[str, Any]) -> List[Link]:
 
     If there is no link, then return empty list. Does not type-check.
     """
+    LOGGER.info(f"Extracting Links Carrier: {carrier}")
     try:
         return _LinkSerialization.decode_links(carrier[_LINKS_KEY])
     except KeyError:
