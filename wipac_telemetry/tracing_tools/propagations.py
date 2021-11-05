@@ -5,7 +5,7 @@ import pickle
 from typing import Any, Dict, List, Optional
 
 from opentelemetry import propagate
-from opentelemetry.trace import Link, Span, SpanContext, get_current_span
+from opentelemetry.trace import Link, Span, get_current_span
 from opentelemetry.util import types
 
 from .utils import convert_to_attributes
@@ -17,35 +17,32 @@ class _LinkSerialization:
     @staticmethod
     def encode_links(links: List[Link]) -> bytes:
         """Custom encoding for sending links."""
+        encoded = []
         for lk in links:
             print(lk)
+            attrs = {}
+            if lk.attributes:
+                for k, v in lk.attributes.items():
+                    attrs[k] = v
+
             pickle.dumps(lk.context)
             pickle.dumps(int(lk.context.trace_id))
             pickle.dumps(int(lk.context.span_id))
             print(lk.attributes)
             pickle.dumps(lk.attributes)
 
-        return pickle.dumps(
-            [
-                (int(lk.context.trace_id), int(lk.context.span_id), lk.attributes)
-                for lk in links
-            ]
-        )
+            print(attrs)
+            encoded.append((lk.context, attrs))
+
+        return pickle.dumps(encoded)
 
     @staticmethod
     def decode_links(obj: Any) -> List[Link]:
         """Counterpart decoding for receiving links."""
         tuples = pickle.loads(obj)
         return [
-            Link(
-                SpanContext(
-                    trace_id=trace_id,
-                    span_id=span_id,
-                    is_remote=False,
-                ),
-                attrs,
-            )
-            for trace_id, span_id, attrs in tuples
+            Link(span_context, convert_to_attributes(attrs))
+            for span_context, attrs in tuples
         ]
 
 
