@@ -18,7 +18,10 @@ class _LinkSerialization:
     def encode_links(links: List[Link]) -> bytes:
         """Custom encoding for sending links."""
         return pickle.dumps(
-            [(lk.context.trace_id, lk.context.span_id, lk.attributes) for lk in links]
+            [
+                (int(lk.context.trace_id), int(lk.context.span_id), lk.attributes)
+                for lk in links
+            ]
         )
 
     @staticmethod
