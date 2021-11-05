@@ -2,7 +2,7 @@
 
 
 import pickle
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
 from opentelemetry import propagate
 from opentelemetry.trace import Link, Span, get_current_span
@@ -11,6 +11,19 @@ from opentelemetry.util import types
 from .utils import convert_to_attributes
 
 _LINKS_KEY = "WIPAC-TEL-LINKS"
+
+
+class _LinkSerialization:
+    @staticmethod
+    def encode_links(links: List[Link]) -> bytes:
+        """Custom encoding for sending links."""
+        return pickle.dumps([(lk.context, lk.attributes) for lk in links])
+
+    @staticmethod
+    def decode_links(obj: Any) -> List[Link]:
+        """Counterpart decoding for receiving links."""
+        tuples = pickle.loads(obj)
+        return [Link(context, attrs) for context, attrs in tuples]
 
 
 def inject_span_carrier(carrier: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -75,7 +88,7 @@ def inject_links_carrier(
     if addl_links:
         links.extend(addl_links)
 
-    carrier[_LINKS_KEY] = pickle.dumps(links)
+    carrier[_LINKS_KEY] = _LinkSerialization.encode_links(links)
 
     return carrier
 
@@ -86,7 +99,7 @@ def extract_links_carrier(carrier: Dict[str, Any]) -> List[Link]:
     If there is no link, then return empty list. Does not type-check.
     """
     try:
-        return cast(List[Link], pickle.loads(carrier[_LINKS_KEY]))
+        return _LinkSerialization.decode_links(carrier[_LINKS_KEY])
     except KeyError:
         return []
 
