@@ -18,11 +18,9 @@ shop = SetupShop(
     ((3, 6), (3, 8)),
     "WIPAC-Specific OpenTelemetry Tools",
     pinned_packages=[
-        "coloredlogs",
         "opentelemetry-api",
         "opentelemetry-exporter-jaeger",
-        "opentelemetry-exporter-otlp",
-        "opentelemetry-propagator-b3",
+        "opentelemetry-exporter-otlp-proto-http",
         "opentelemetry-sdk",
     ],
 )

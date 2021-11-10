@@ -7,7 +7,6 @@ import os
 import sys
 from pathlib import Path
 
-# from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore[import]
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[import]
     OTLPSpanExporter,
 )

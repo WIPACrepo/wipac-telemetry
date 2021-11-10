@@ -1,13 +1,7 @@
-git+https://github.com/WIPACrepo/wipac-dev-tools@v1.0.11#egg=wipac_dev_tools
+git+https://github.com/WIPACrepo/wipac-dev-tools@v1.0.12#egg=wipac_dev_tools
 coloredlogs==15.0.1
 opentelemetry-api==1.6.2
 opentelemetry-exporter-jaeger==1.6.2
-opentelemetry-exporter-otlp==1.6.2
-opentelemetry-exporter-otlp-proto-grpc==1.6.2
 opentelemetry-exporter-otlp-proto-http==1.6.2
-opentelemetry-instrumentation-flask
-opentelemetry-instrumentation-requests
-opentelemetry-propagator-b3==1.6.2
 opentelemetry-sdk==1.6.2
-pika==1.2.0
 typing-extensions
