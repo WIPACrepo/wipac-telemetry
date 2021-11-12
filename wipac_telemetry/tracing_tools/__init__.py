@@ -34,7 +34,7 @@ from .propagations import (  # noqa
     inject_span_carrier,
     span_to_link,
 )
-from .spans import CarrierRelation, SpanBehavior, respanned, spanned  # noqa
+from .spans import CarrierRelation, SpanBehavior, SpanNamer, respanned, spanned  # noqa
 
 __all__ = [
     "add_event",
@@ -51,6 +51,7 @@ __all__ = [
     "SpanBehavior",
     "SpanKind",
     "spanned",
+    "SpanNamer",
 ]
 
 
