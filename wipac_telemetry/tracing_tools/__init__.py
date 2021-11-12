@@ -73,6 +73,10 @@ def _get_version(package: str) -> str:
     return version
 
 
+class WIPACTelemetryStartupError(RuntimeError):
+    """Raised when startup fails."""
+
+
 def get_service_name() -> str:
     """Build the service name from module/script auto-detection."""
     main_mod = sys.modules["__main__"]
@@ -88,17 +92,24 @@ def get_service_name() -> str:
         try:
             main_mod_abspath = Path(os.path.abspath(main_mod.__file__))
         except AttributeError as e:
-            raise RuntimeError(
-                "WIPAC Telemetry service started up before '__main__' was set. "
+            raise WIPACTelemetryStartupError(
+                "Service started up before '__main__' was set. "
                 "Do you have imports in your package's base '__init__.py'? "
                 "If so, remove them; one of these likely prematurely called "
-                "this library before '__main__.py' was executed."
+                "this library before '__main__.py' was executed. "
+                "Alternatively, are in a REPL (like iPython)? "
+                "WIPACTEL doesn't support tracing REPLs."
             ) from e
 
         _stderr_log(f"Detecting Service Name from `{main_mod_abspath}`...")
         script = main_mod_abspath.name  # ex: 'myscript.py'
-        with open(main_mod_abspath, "rb") as f:
-            readable_hash = hashlib.sha256(f.read()).hexdigest()
+        try:
+            with open(main_mod_abspath, "rb") as f:
+                readable_hash = hashlib.sha256(f.read()).hexdigest()
+        except Exception as e:
+            raise WIPACTelemetryStartupError(
+                f"Failed to get hash of file for service name creation: '{main_mod_abspath}'"
+            ) from e
         service_name = f"./{script} ({readable_hash[-4:]})"
 
     # check if user supplied a prefix
