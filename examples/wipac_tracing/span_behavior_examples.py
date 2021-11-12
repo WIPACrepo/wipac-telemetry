@@ -23,8 +23,14 @@ class DemoClass:
 
     def __init__(self) -> None:
         self.span: Optional[wtt.Span] = None
+        self.name = "DEMO!"
 
-    @wtt.spanned(behavior=wtt.SpanBehavior.ONLY_END_ON_EXCEPTION)
+    @wtt.spanned(
+        span_namer=wtt.SpanNamer(
+            literal_name="TheBestPrepare", use_this_arg="self.name"
+        ),
+        behavior=wtt.SpanBehavior.ONLY_END_ON_EXCEPTION,
+    )
     def prepare(self) -> None:
         """Do some things and start an independent span."""
         self.span = wtt.get_current_span()
@@ -116,8 +122,15 @@ class ExternalClass:
 
     def __init__(self, span: wtt.Span) -> None:
         self.span = span
+        self.name = "TheExternalClass!"
 
-    @wtt.spanned()  # sets current_span
+    @wtt.spanned(
+        span_namer=wtt.SpanNamer(
+            literal_name="DISJOINT_SPANNED_METHOD",
+            use_this_arg="self.name",
+            use_function_name=False,
+        )
+    )  # sets current_span
     def disjoint_spanned_method(self) -> None:
         """Do some things with a new disjoint span."""
         print("disjoint_spanned_method")
@@ -147,7 +160,10 @@ class ExternalClass:
     #         self.span.end()
 
 
-@wtt.spanned(attributes={"a": 1})  # auto end-on-exit
+@wtt.spanned(
+    span_namer=wtt.SpanNamer(use_function_name=False),
+    attributes={"a": 1},
+)  # auto end-on-exit
 def injected_span_pass_to_instance() -> ExternalClass:
     """Inject a span then pass onto an instance."""
     assert wtt.get_current_span().is_recording()
