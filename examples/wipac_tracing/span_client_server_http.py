@@ -22,7 +22,9 @@ PORT = 2000
 ########################################################################################
 
 
-@wtt.spanned(kind=wtt.SpanKind.CLIENT)
+@wtt.spanned(
+    span_namer=wtt.SpanNamer(literal_name="TheBestClient"), kind=wtt.SpanKind.CLIENT
+)
 def client() -> None:
     """Run HTTP client."""
     logging.info("Example HTTP Client with 'kind=SpanKind.CLIENT'")
@@ -66,7 +68,11 @@ def client() -> None:
 class HTTPRequestHandler(BaseHTTPRequestHandler):
     """Custom HTTPRequestHandler class."""
 
-    @wtt.spanned(kind=wtt.SpanKind.SERVER, carrier="self.headers")
+    @wtt.spanned(
+        span_namer=wtt.SpanNamer(use_this_arg="self.command"),
+        kind=wtt.SpanKind.SERVER,
+        carrier="self.headers",
+    )
     def do_GET(self) -> None:  # pylint: disable=invalid-name
         """Handle GET command."""
         logging.info("Example HTTP Server Handler with 'kind=SpanKind.SERVER'")

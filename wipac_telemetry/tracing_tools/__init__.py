@@ -34,7 +34,7 @@ from .propagations import (  # noqa
     inject_span_carrier,
     span_to_link,
 )
-from .spans import CarrierRelation, SpanBehavior, respanned, spanned  # noqa
+from .spans import CarrierRelation, SpanBehavior, SpanNamer, respanned, spanned  # noqa
 
 __all__ = [
     "add_event",
@@ -51,13 +51,14 @@ __all__ = [
     "SpanBehavior",
     "SpanKind",
     "spanned",
+    "SpanNamer",
 ]
 
 
 # Config SDK ###########################################################################
 
 
-def _pseudo_log(msg: str) -> None:
+def _stderr_log(msg: str) -> None:
     print(f"[wipac-telemetry-setup] {msg}", file=sys.stderr)
 
 
@@ -73,6 +74,10 @@ def _get_version(package: str) -> str:
     return version
 
 
+class WIPACTelemetryStartupError(RuntimeError):
+    """Raised when startup fails."""
+
+
 def get_service_name() -> str:
     """Build the service name from module/script auto-detection."""
     main_mod = sys.modules["__main__"]
@@ -80,7 +85,7 @@ def get_service_name() -> str:
 
     if package:
         # this means client is running as a module, so get the full package name + version
-        _pseudo_log(f"Detecting Service Name from `{package}`...")
+        _stderr_log(f"Detecting Service Name from `{package}`...")
         version = _get_version(package)
         service_name = f"{package} ({version})"
     else:
@@ -88,30 +93,37 @@ def get_service_name() -> str:
         try:
             main_mod_abspath = Path(os.path.abspath(main_mod.__file__))
         except AttributeError as e:
-            raise RuntimeError(
-                "WIPAC Telemetry service started up before '__main__' was set. "
+            raise WIPACTelemetryStartupError(
+                "Service started up before '__main__' was set. "
                 "Do you have imports in your package's base '__init__.py'? "
                 "If so, remove them; one of these likely prematurely called "
-                "this library before '__main__.py' was executed."
+                "this library before '__main__.py' was executed. "
+                "Alternatively, are in a REPL (like iPython)? "
+                "WIPACTEL doesn't support tracing REPLs."
             ) from e
 
-        _pseudo_log(f"Detecting Service Name from `{main_mod_abspath}`...")
+        _stderr_log(f"Detecting Service Name from `{main_mod_abspath}`...")
         script = main_mod_abspath.name  # ex: 'myscript.py'
-        with open(main_mod_abspath, "rb") as f:
-            readable_hash = hashlib.sha256(f.read()).hexdigest()
+        try:
+            with open(main_mod_abspath, "rb") as f:
+                readable_hash = hashlib.sha256(f.read()).hexdigest()
+        except Exception as e:
+            raise WIPACTelemetryStartupError(
+                f"Failed to get hash of file for service name creation: '{main_mod_abspath}'"
+            ) from e
         service_name = f"./{script} ({readable_hash[-4:]})"
 
     # check if user supplied a prefix
     if CONFIG["WIPACTEL_SERVICE_NAME_PREFIX"]:
-        _pseudo_log(f"with prefix: \"{CONFIG['WIPACTEL_SERVICE_NAME_PREFIX']}\"")
+        _stderr_log(f"with prefix: \"{CONFIG['WIPACTEL_SERVICE_NAME_PREFIX']}\"")
         service_name = f"{CONFIG['WIPACTEL_SERVICE_NAME_PREFIX']}/{service_name}"
 
-    _pseudo_log(f'Using Service Name: "{service_name}"')
+    _stderr_log(f'Using Service Name: "{service_name}"')
     return service_name
 
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"] or CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
-    _pseudo_log("Setting Tracer Provider...")
+    _stderr_log("Setting Tracer Provider...")
     set_tracer_provider(
         TracerProvider(resource=Resource.create({SERVICE_NAME: get_service_name()}))
     )
@@ -120,14 +132,14 @@ else:
     set_tracer_provider(TracerProvider())
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
-    _pseudo_log("Adding ConsoleSpanExporter")
+    _stderr_log("Adding ConsoleSpanExporter")
     get_tracer_provider().add_span_processor(
         # output to stdout
         SimpleSpanProcessor(ConsoleSpanExporter())
     )
 
 if CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
-    _pseudo_log(f"Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})")
+    _stderr_log(f"Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})")
     get_tracer_provider().add_span_processor(
         # relies on env variables
         # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
@@ -147,4 +159,4 @@ if CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
     )
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"] or CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
-    _pseudo_log("Setup complete.")
+    _stderr_log("Setup complete.")

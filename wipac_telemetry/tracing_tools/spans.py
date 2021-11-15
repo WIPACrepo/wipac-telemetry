@@ -41,6 +41,56 @@ class InvalidSpanBehavior(ValueError):
     """Raise when an invalid SpanBehavior value is attempted."""
 
 
+class SpanNamer:
+    """Build a name for the span from various sources.
+
+    Those set to `None` are ignored.
+
+    Build Order Pattern: "[<function_name>:][<literal_name>:][<use_this_arg>]"
+    Examples:
+        - `SpanNamer(literal_name="MyCustomName", use_function_name=True, use_this_arg="self.request.method")`
+            "MyClass.my_method:MyCustomName:POST"
+        - `SpanNamer(literal_name="MyCustomName", use_function_name=False)`
+            "MyCustomName:POST"
+        - `SpanNamer(use_function_name=True)`
+            "MyClass.my_method"
+        - `SpanNamer(use_function_name=False)`
+            "MyClass.my_method" (there has to be a span name!)
+
+    Arguments:
+        literal_name: a literal name that will be used verbatim
+        use_this_arg: the name of a function-argument (or sub-argument) that will be used
+        use_function_name: whether to use the wrapped function's name
+    """
+
+    def __init__(
+        self,
+        literal_name: Optional[str] = None,
+        use_this_arg: Optional[str] = None,
+        use_function_name: bool = True,
+    ) -> None:
+        self.literal_name = literal_name
+        self.use_this_arg = use_this_arg
+        self.use_function_name = use_function_name
+
+        # if everything is essentially blank, then fallback to using the function's name
+        if not any([self.literal_name, self.use_this_arg, self.use_function_name]):
+            self.use_function_name = True
+
+    def build_name(self, inspector: FunctionInspector) -> str:
+        """Build and return the span name."""
+        builder = []
+
+        if self.use_function_name:
+            builder.append(inspector.func.__qualname__)  # ex: MyClass.my_method
+        if self.literal_name:
+            builder.append(self.literal_name)
+        if self.use_this_arg:
+            builder.append(str(inspector.resolve_attr(self.use_this_arg)))
+
+        return ":".join(builder)
+
+
 ########################################################################################
 
 
@@ -86,24 +136,20 @@ class _NewSpanConductor(_SpanConductor):
         self,
         otel_attrs_settings: _OTELAttributeSettings,
         behavior: SpanBehavior,
-        name: str,
+        span_namer: SpanNamer,
         kind: SpanKind,
         carrier: str,
         carrier_relation: CarrierRelation,
     ):
         super().__init__(otel_attrs_settings, behavior, "premiere")
-        self.name = name
+        self.span_namer = span_namer
         self.kind = kind
         self.carrier = carrier
         self.carrier_relation = carrier_relation
 
     def get_span(self, inspector: FunctionInspector) -> Span:
         """Set up, start, and return a new span instance."""
-        if self.name:
-            span_name = self.name
-        else:
-            span_name = inspector.func.__qualname__  # Ex: MyClass.method
-
+        span_name = self.span_namer.build_name(inspector)
         tracer_name = inspect.getfile(inspector.func)  # Ex: /path/to/file.py
 
         if self.carrier and self.carrier_relation == CarrierRelation.SPAN_CHILD:
@@ -319,7 +365,7 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
 
 
 def spanned(
-    name: Optional[str] = None,
+    span_namer: Optional[SpanNamer] = None,
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
@@ -334,7 +380,9 @@ def spanned(
     attributes added.
 
     Keyword Arguments:
-        name -- name of span; if not provided, use function's qualified name
+        span_namer -- `SpanNamer` instance for naming the span
+                    - if not provided, use function's qualified name
+                    - see `SpanNamer` for naming options
         attributes -- a dict of attributes to add to span
         all_args -- whether to auto-add all the function-arguments as attributes
         these -- a whitelist of function-arguments and/or `self.*`-variables to add as attributes
@@ -369,8 +417,8 @@ def spanned(
     """
     if not these:
         these = []
-    if not name:
-        name = ""
+    if not span_namer:
+        span_namer = SpanNamer()
     if not carrier:
         carrier = ""
 
@@ -378,7 +426,7 @@ def spanned(
         _NewSpanConductor(
             {"attributes": attributes, "all_args": all_args, "these": these},
             behavior,
-            name,
+            span_namer,
             kind,
             carrier,
             carrier_relation,
