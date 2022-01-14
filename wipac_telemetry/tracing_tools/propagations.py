@@ -5,8 +5,12 @@ import pickle
 from typing import Any, Dict, List, Optional
 
 from opentelemetry import propagate
-from opentelemetry.trace import Link, Span, get_current_span
-from opentelemetry.util import types
+from opentelemetry.trace import (  # type: ignore[attr-defined]
+    Link,
+    Span,
+    get_current_span,
+)
+from opentelemetry.util import types  # type: ignore[attr-defined]
 
 from .config import LOGGER
 from .utils import convert_to_attributes

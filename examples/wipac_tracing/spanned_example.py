@@ -37,7 +37,7 @@ class Example2:
         logging.info(msg)
 
 
-@wtt.spanned("my-span")
+@wtt.spanned(wtt.SpanNamer("my-span"))
 def example_3_with_name() -> None:
     """Print and log simple message."""
     msg = "Hello World!"

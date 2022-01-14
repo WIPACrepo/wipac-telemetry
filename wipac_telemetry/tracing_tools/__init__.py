@@ -7,17 +7,20 @@ import os
 import sys
 from pathlib import Path
 
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[import]
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[attr-defined]
     OTLPSpanExporter,
 )
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
-from opentelemetry.sdk.trace.export import (  # type: ignore[import]
+from opentelemetry.sdk.resources import (  # type: ignore[attr-defined]
+    SERVICE_NAME,
+    Resource,
+)
+from opentelemetry.sdk.trace import TracerProvider  # type: ignore[attr-defined]
+from opentelemetry.sdk.trace.export import (  # type: ignore[attr-defined]
     BatchSpanProcessor,
     ConsoleSpanExporter,
     SimpleSpanProcessor,
 )
-from opentelemetry.trace import (  # noqa
+from opentelemetry.trace import (  # type: ignore[attr-defined]  # noqa
     Link,
     Span,
     SpanKind,
@@ -66,7 +69,7 @@ def _get_version(package: str) -> str:
     """Get the version from the module; if that fails, grab today's date."""
     try:
         mod = importlib.import_module(package.split(".")[0])  # use base package name
-        triple = mod.version_info[:3]  # type: ignore[attr-defined]  # ex: (1,2,3)
+        triple = mod.version_info[:3]  # ex: (1,2,3)
         version = "v" + ".".join(f"{x:02d}" for x in triple)  # ex: v01.02.03
     except:  # noqa: E722 # pylint:disable=bare-except
         version = datetime.date.today().isoformat()
@@ -86,11 +89,17 @@ def get_service_name() -> str:
     if package:
         # this means client is running as a module, so get the full package name + version
         _stderr_log(f"Detecting Service Name from `{package}`...")
+        if not isinstance(package, str):
+            raise RuntimeError(
+                f"__main__'s __package__ is not `str`: '{package}' ({type(package)})"
+            )
         version = _get_version(package)
         service_name = f"{package} ({version})"
     else:
         # otherwise, client is running as a script, so use the file's name
         try:
+            if not main_mod.__file__:
+                raise RuntimeError(f"__main__'s __file__ is Falsy: {main_mod.__file__}")
             main_mod_abspath = Path(os.path.abspath(main_mod.__file__))
         except AttributeError as e:
             raise WIPACTelemetryStartupError(
