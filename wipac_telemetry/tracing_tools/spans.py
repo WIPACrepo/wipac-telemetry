@@ -12,9 +12,15 @@ try:
 except ImportError:
     from typing_extensions import Final, TypedDict  # type: ignore[misc]
 
-from opentelemetry.propagate import extract
-from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, use_span
-from opentelemetry.util import types
+from opentelemetry.propagate import extract  # type: ignore[attr-defined]
+from opentelemetry.trace import (  # type: ignore[attr-defined]
+    Span,
+    SpanKind,
+    get_current_span,
+    get_tracer,
+    use_span,
+)
+from opentelemetry.util import types  # type: ignore[attr-defined]
 
 from .propagations import extract_links_carrier
 from .utils import LOGGER, Args, FunctionInspector, Kwargs

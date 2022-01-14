@@ -5,8 +5,8 @@ import copy
 import inspect
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
-from opentelemetry.trace import Span
-from opentelemetry.util import types
+from opentelemetry.trace import Span  # type: ignore[attr-defined]
+from opentelemetry.util import types  # type: ignore[attr-defined]
 
 from .config import LOGGER
 
