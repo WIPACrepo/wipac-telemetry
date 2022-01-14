@@ -7,17 +7,20 @@ import os
 import sys
 from pathlib import Path
 
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[import]
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[attr-defined, import]
     OTLPSpanExporter,
 )
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider  # type: ignore[import]
-from opentelemetry.sdk.trace.export import (  # type: ignore[import]
+from opentelemetry.sdk.resources import (  # type: ignore[attr-defined]
+    SERVICE_NAME,
+    Resource,
+)
+from opentelemetry.sdk.trace import TracerProvider  # type: ignore[attr-defined, import]
+from opentelemetry.sdk.trace.export import (  # type: ignore[attr-defined, import]
     BatchSpanProcessor,
     ConsoleSpanExporter,
     SimpleSpanProcessor,
 )
-from opentelemetry.trace import (  # noqa
+from opentelemetry.trace import (  # type: ignore[attr-defined]  # noqa
     Link,
     Span,
     SpanKind,
@@ -66,7 +69,7 @@ def _get_version(package: str) -> str:
     """Get the version from the module; if that fails, grab today's date."""
     try:
         mod = importlib.import_module(package.split(".")[0])  # use base package name
-        triple = mod.version_info[:3]  # type: ignore[attr-defined]  # ex: (1,2,3)
+        triple = mod.version_info[:3]  # ex: (1,2,3)
         version = "v" + ".".join(f"{x:02d}" for x in triple)  # ex: v01.02.03
     except:  # noqa: E722 # pylint:disable=bare-except
         version = datetime.date.today().isoformat()

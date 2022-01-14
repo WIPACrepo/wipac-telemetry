@@ -12,7 +12,7 @@ try:
 except ImportError:
     from typing_extensions import Final, TypedDict  # type: ignore[misc]
 
-from opentelemetry.propagate import extract  # type: ignore[attr-defined]
+from opentelemetry.propagate import extract  # type: ignore[attr-defined, import]
 from opentelemetry.trace import (  # type: ignore[attr-defined]
     Span,
     SpanKind,
