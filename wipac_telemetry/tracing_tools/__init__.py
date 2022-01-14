@@ -89,11 +89,17 @@ def get_service_name() -> str:
     if package:
         # this means client is running as a module, so get the full package name + version
         _stderr_log(f"Detecting Service Name from `{package}`...")
+        if not isinstance(package, str):
+            raise RuntimeError(
+                f"__main__'s __package__ is not `str`: '{package}' ({type(package)})"
+            )
         version = _get_version(package)
         service_name = f"{package} ({version})"
     else:
         # otherwise, client is running as a script, so use the file's name
         try:
+            if not main_mod.__file__:
+                raise RuntimeError(f"__main__'s __file__ is Falsy: {main_mod.__file__}")
             main_mod_abspath = Path(os.path.abspath(main_mod.__file__))
         except AttributeError as e:
             raise WIPACTelemetryStartupError(
