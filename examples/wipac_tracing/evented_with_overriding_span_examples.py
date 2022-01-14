@@ -3,7 +3,6 @@
 import logging
 import os
 import sys
-from typing import cast
 
 import coloredlogs  # type: ignore[import]
 
