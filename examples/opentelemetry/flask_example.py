@@ -1,15 +1,16 @@
+# type: ignore
 """Basic test script using flask."""
 
 # fmt:off
 
 import flask
 import requests
+
 from opentelemetry import trace
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import (ConsoleSpanExporter,
-                                            SimpleSpanProcessor)
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 
 trace.set_tracer_provider(TracerProvider())
 trace.get_tracer_provider().add_span_processor(
