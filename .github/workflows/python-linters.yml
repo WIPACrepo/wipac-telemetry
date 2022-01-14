@@ -1,0 +1,26 @@
+# For most recent version see:
+# https://github.com/WIPACrepo/wipac-dev-tools/blob/main/.github/workflows/python-linters.yml
+# Copy any updates to wipac-dev-tools.
+
+name: Python Linters
+
+on: [push]
+
+jobs:
+
+  flake8:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - run: pip install flake8
+      - run: flake8 . --ignore=E203,E231,E226,E501,W503,W504
+
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - run: pip install mypy
+      - run: pip install .
+      - run: mypy --install-types --non-interactive --exclude build/ .
