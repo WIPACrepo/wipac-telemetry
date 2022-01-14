@@ -7,15 +7,15 @@ import os
 import sys
 from pathlib import Path
 
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[attr-defined, import]
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[attr-defined]
     OTLPSpanExporter,
 )
 from opentelemetry.sdk.resources import (  # type: ignore[attr-defined]
     SERVICE_NAME,
     Resource,
 )
-from opentelemetry.sdk.trace import TracerProvider  # type: ignore[attr-defined, import]
-from opentelemetry.sdk.trace.export import (  # type: ignore[attr-defined, import]
+from opentelemetry.sdk.trace import TracerProvider  # type: ignore[attr-defined]
+from opentelemetry.sdk.trace.export import (  # type: ignore[attr-defined]
     BatchSpanProcessor,
     ConsoleSpanExporter,
     SimpleSpanProcessor,
