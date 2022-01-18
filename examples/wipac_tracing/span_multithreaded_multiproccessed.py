@@ -44,7 +44,10 @@ def example_00_threads_incorrect(n_threads: int) -> None:
         assert outter_span.is_recording()  # surprising? this is b/c of shared memory
         assert wtt.get_current_span().is_recording()  # as expected
         assert outter_span != wtt.get_current_span()  # good
-        assert not wtt.get_current_span()._parent  # NOT GOOD!
+
+        # NOT GOOD!
+        assert not wtt.get_current_span()._parent  # type: ignore[attr-defined]
+
         # # # #
         time.sleep(1)
         return worker
@@ -116,7 +119,7 @@ def example_02_threads_incorrect(n_threads: int) -> None:
         assert outter_span.is_recording()  # sure
         assert wtt.get_current_span().is_recording()  # as expected
         assert outter_span == wtt.get_current_span()  # as expected
-        assert not wtt.get_current_span()._parent
+        assert not wtt.get_current_span()._parent  # type: ignore[attr-defined]
         # # # #
         # print(carrier)
         time.sleep(1)
@@ -151,7 +154,7 @@ def example_10_threads(n_threads: int) -> None:
         assert outter_span.is_recording()  # surprising? this is b/c of shared memory
         assert wtt.get_current_span().is_recording()  # as expected
         assert outter_span != wtt.get_current_span()  # good
-        assert wtt.get_current_span()._parent  # GREAT!
+        assert wtt.get_current_span()._parent  # type: ignore[attr-defined]  # GREAT!
         # # # #
         print(carrier)
         time.sleep(1)

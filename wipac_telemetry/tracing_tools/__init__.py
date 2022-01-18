@@ -7,20 +7,15 @@ import os
 import sys
 from pathlib import Path
 
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore[attr-defined]
-    OTLPSpanExporter,
-)
-from opentelemetry.sdk.resources import (  # type: ignore[attr-defined]
-    SERVICE_NAME,
-    Resource,
-)
-from opentelemetry.sdk.trace import TracerProvider  # type: ignore[attr-defined]
-from opentelemetry.sdk.trace.export import (  # type: ignore[attr-defined]
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     ConsoleSpanExporter,
     SimpleSpanProcessor,
 )
-from opentelemetry.trace import (  # type: ignore[attr-defined]  # noqa
+from opentelemetry.trace import (  # noqa
     Link,
     Span,
     SpanKind,
@@ -142,14 +137,14 @@ else:
 
 if CONFIG["WIPACTEL_EXPORT_STDOUT"]:
     _stderr_log("Adding ConsoleSpanExporter")
-    get_tracer_provider().add_span_processor(
+    get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
         # output to stdout
         SimpleSpanProcessor(ConsoleSpanExporter())
     )
 
 if CONFIG["OTEL_EXPORTER_OTLP_ENDPOINT"]:
     _stderr_log(f"Adding OTLPSpanExporter ({CONFIG['OTEL_EXPORTER_OTLP_ENDPOINT']})")
-    get_tracer_provider().add_span_processor(
+    get_tracer_provider().add_span_processor(  # type: ignore[attr-defined]
         # relies on env variables
         # -- https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
         # OTEL_EXPORTER_OTLP_TRACES_TIMEOUT

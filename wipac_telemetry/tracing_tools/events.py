@@ -6,8 +6,8 @@ import inspect
 from functools import wraps
 from typing import Any, Callable, List, Optional, Tuple
 
-from opentelemetry.trace import Span, get_current_span  # type: ignore[attr-defined]
-from opentelemetry.util import types  # type: ignore[attr-defined]
+from opentelemetry.trace import Span, get_current_span
+from opentelemetry.util import types
 
 from .utils import LOGGER, Args, FunctionInspector, Kwargs
 
@@ -47,7 +47,7 @@ def evented(
                 _span = get_current_span()
 
             LOGGER.info(
-                f"Recorded event `{event_name}` for span `{_span.name}` with: "
+                f"Recorded event `{event_name}` for span `{_span.name}` with: "  # type: ignore[attr-defined]
                 f"attributes={list(_attrs.keys()) if _attrs else []}"
             )
 

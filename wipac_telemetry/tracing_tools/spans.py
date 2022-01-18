@@ -12,15 +12,9 @@ try:
 except ImportError:
     from typing_extensions import Final, TypedDict  # type: ignore[misc]
 
-from opentelemetry.propagate import extract  # type: ignore[attr-defined, import]
-from opentelemetry.trace import (  # type: ignore[attr-defined]
-    Span,
-    SpanKind,
-    get_current_span,
-    get_tracer,
-    use_span,
-)
-from opentelemetry.util import types  # type: ignore[attr-defined]
+from opentelemetry.propagate import extract
+from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, use_span
+from opentelemetry.util import types
 
 from .propagations import extract_links_carrier
 from .utils import LOGGER, Args, FunctionInspector, Kwargs
@@ -227,7 +221,7 @@ class _ReuseSpanConductor(_SpanConductor):
                 )
 
         LOGGER.info(
-            f"Re-using span `{span.name}` "
+            f"Re-using span `{span.name}` "  # type: ignore[attr-defined]
             f"(from '{self.span_var_name if self.span_var_name else 'current-span'}') "
             f"with: additional attributes={list(attrs.keys()) if attrs else []}"
         )
@@ -252,7 +246,7 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Function")
             span = setup(args, kwargs)
-            is_iterator_class_next_method = span.name.endswith(".__next__")
+            is_iterator_class_next_method = span.name.endswith(".__next__")  # type: ignore[attr-defined]
             reraise_stopiteration_outside_contextmanager = False
 
             # CASE 1 ----------------------------------------------------------
@@ -318,7 +312,7 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             LOGGER.debug("Spanned Async Function")
             span = setup(args, kwargs)
-            is_iterator_class_anext_method = span.name.endswith(".__anext__")
+            is_iterator_class_anext_method = span.name.endswith(".__anext__")  # type: ignore[attr-defined]
             reraise_stopasynciteration_outside_contextmanager = False
 
             # CASE 1 ----------------------------------------------------------
