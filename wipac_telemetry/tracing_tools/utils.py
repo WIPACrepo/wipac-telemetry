@@ -164,12 +164,13 @@ def convert_to_attributes(
         # is this a tuple/list?
         elif isinstance(raw[attr], (tuple, list)):
             # get all types (but ignore `None`s b/c they're always allowed)
-            member_types = list(set(type(m) for m in raw[attr] if m is not None))
+            member_types = list(set(type(m) for m in raw[attr] if m is not None))  # type: ignore[union-attr]
             # if every member is same (legal) type, copy it all
             if len(member_types) == 1 and member_types[0] in LEGAL_ATTR_BASE_TYPES:
                 out[attr] = copy.deepcopy(raw[attr])
+            # otherwise: retain list, but as reprs (strs)
             else:
-                out[attr] = [repr(v) for v in raw[attr]]  # retain list, but as reprs
+                out[attr] = [repr(v) for v in raw[attr]]  # type: ignore[union-attr]
 
         # other types -> get `repr()`
         else:
