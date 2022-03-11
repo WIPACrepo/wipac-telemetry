@@ -20,7 +20,7 @@ https://skywalking.apache.org/docs/main/latest/en/setup/backend/backend-storage/
 ### Grafana Tempo
 1. Open terminal window
 
-    cd ~/github/WIPACrepo/wipac-telemetry-prototype/examples/telemetry-server
+    cd ~/github/WIPACrepo/wipac-telemetry/examples/telemetry-server
 
 2. Run script to set up local Docker environment
 
@@ -54,7 +54,7 @@ https://skywalking.apache.org/docs/main/latest/en/setup/backend/backend-storage/
 ### Jaeger UI (OpenTelemetry)
 1. Open terminal window
 
-    cd ~/github/WIPACrepo/wipac-telemetry-prototype
+    cd ~/github/WIPACrepo/wipac-telemetry
 
 2. Run script to set up local Docker environment
 
@@ -71,7 +71,7 @@ https://skywalking.apache.org/docs/main/latest/en/setup/backend/backend-storage/
 ### Zipkin
 1. Open terminal window
 
-    cd ~/github/WIPACrepo/wipac-telemetry-prototype/examples/telemetry-server
+    cd ~/github/WIPACrepo/wipac-telemetry/examples/telemetry-server
 
 2. Run script to set up local Docker environment
 
@@ -102,7 +102,7 @@ and my guess is the author didn't want to update it.
 ### wipac_telemetry run_all_examples.sh
 1. Open terminal window
 
-    cd ~/github/WIPACrepo/wipac-telemetry-prototype
+    cd ~/github/WIPACrepo/wipac-telemetrys
 
 2. Source Python virtual environment
 
