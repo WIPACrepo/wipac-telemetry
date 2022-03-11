@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.0 (2022-03-11)
+### Feature
+* Updates for PyPI Publish ([#53](https://github.com/WIPACrepo/wipac-telemetry/issues/53)) ([`81c064a`](https://github.com/WIPACrepo/wipac-telemetry/commit/81c064aa377c401843592d79321ba7e2f7e69c3b))
+
 ## v0.1.27 (2022-01-18)
 
 
