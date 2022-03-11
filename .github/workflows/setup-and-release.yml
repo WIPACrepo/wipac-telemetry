@@ -25,9 +25,9 @@ jobs:
 
       - name: Build setup.cfg + README.md (and commit)
         run: |
-          pip3 install requests
+          pip3 install requests wipac-dev-tools
           echo $GITHUB_REPOSITORY
-          python3 wipac_dev_tools/setup_builder.py setup.cfg $GITHUB_REPOSITORY
+          python3 -m wipac_dev_tools.setup_builder setup.cfg $GITHUB_REPOSITORY
           git add setup.cfg
           git commit -m "<bot> update setup.cfg" || true
           git add README.md || true
