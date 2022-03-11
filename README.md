@@ -1,3 +1,6 @@
+<!--- Top of README Badges (automated) --->
+[![CircleCI](https://img.shields.io/circleci/build/github/WIPACrepo/wipac-telemetry)](https://app.circleci.com/pipelines/github/WIPACrepo/wipac-telemetry?branch=main&filter=all) [![PyPI](https://img.shields.io/pypi/v/wipac-dev-tools)](https://pypi.org/project/wipac-dev-tools/) [![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/WIPACrepo/wipac-telemetry?include_prereleases)](https://github.com/WIPACrepo/wipac-telemetry/) [![PyPI - License](https://img.shields.io/pypi/l/wipac-dev-tools)](https://github.com/WIPACrepo/wipac-telemetry/blob/main/LICENSE) [![Lines of code](https://img.shields.io/tokei/lines/github/WIPACrepo/wipac-telemetry)](https://github.com/WIPACrepo/wipac-telemetry/) [![GitHub issues](https://img.shields.io/github/issues/WIPACrepo/wipac-telemetry)](https://github.com/WIPACrepo/wipac-telemetry/issues?q=is%3Aissue+sort%3Aupdated-desc+is%3Aopen) [![GitHub pull requests](https://img.shields.io/github/issues-pr/WIPACrepo/wipac-telemetry)](https://github.com/WIPACrepo/wipac-telemetry/pulls?q=is%3Apr+sort%3Aupdated-desc+is%3Aopen) 
+<!--- End of README Badges (automated) --->
 # wipac-telemetry-prototype
 Prototype for WIPAC Telemetry : Monitoring/Tracing Applications, Supporting Infrastructures, and Services
 
