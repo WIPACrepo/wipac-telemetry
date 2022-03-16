@@ -3,7 +3,18 @@
 
 import copy
 import inspect
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from opentelemetry.trace import Span
 from opentelemetry.util import types
@@ -20,6 +31,20 @@ LEGAL_ATTR_BASE_TYPES = (str, bool, int, float)
 Args = Tuple[Any, ...]
 Kwargs = Dict[str, Any]
 
+# fmt: off
+try:
+    # 3.10+ decorator type preserve
+    # https://stackoverflow.com/a/65681776
+    from typing import ParamSpec  # type: ignore[attr-defined]
+    T = TypeVar("T")  # the callable/awaitable return type
+    P = ParamSpec("P")  # the callable parameters
+    F = Callable[P, Awaitable[T]]  # type: ignore[misc]  # pylint:disable=ungrouped-imports
+except ImportError:
+    # <3.10 decorator type preserve
+    from typing_extensions import ParamSpec  # pylint:disable=ungrouped-imports
+    F = TypeVar("F", bound=Callable[..., Any])  # type: ignore[arg-type, misc]
+# fmt: on
+
 
 # Classes/Functions ####################################################################
 
@@ -27,7 +52,7 @@ Kwargs = Dict[str, Any]
 class FunctionInspector:
     """A wrapper around a function and its introspection functionalities."""
 
-    def __init__(self, func: Callable[..., Any], args: Args, kwargs: Kwargs):
+    def __init__(self, func: F, args: Args, kwargs: Kwargs):
         bound_args = inspect.signature(func).bind(*args, **kwargs)
         bound_args.apply_defaults()
         self.param_args = dict(bound_args.arguments)
