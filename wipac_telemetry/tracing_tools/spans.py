@@ -5,7 +5,7 @@ import asyncio
 import inspect
 from enum import Enum, auto
 from functools import wraps
-from typing import Any, Callable, List, Optional
+from typing import Callable, List, Optional
 
 try:
     from typing import Final, TypedDict
@@ -17,7 +17,7 @@ from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, us
 from opentelemetry.util import types
 
 from .propagations import extract_links_carrier
-from .utils import LOGGER, Args, FunctionInspector, Kwargs
+from .utils import LOGGER, FunctionInspector, P, T
 
 ########################################################################################
 
@@ -232,18 +232,18 @@ class _ReuseSpanConductor(_SpanConductor):
 ########################################################################################
 
 
-def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
+def _spanned(scond: _SpanConductor) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Handle decorating a function with either a new span or a reused span."""
 
-    def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
-        def setup(args: Args, kwargs: Kwargs) -> Span:
+    def inner_function(func: Callable[P, T]) -> Callable[P, T]:
+        def setup(args: P.args, kwargs: P.kwargs) -> Span:  # type: ignore[name-defined]
             if not isinstance(scond, (_NewSpanConductor, _ReuseSpanConductor)):
                 raise Exception(f"Undefined SpanConductor type: {scond}.")
             else:
                 return scond.get_span(FunctionInspector(func, args, kwargs))
 
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             LOGGER.debug("Spanned Function")
             span = setup(args, kwargs)
             is_iterator_class_next_method = span.name.endswith(".__next__")  # type: ignore[attr-defined]
@@ -285,7 +285,7 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
                 raise InvalidSpanBehavior(scond.behavior)
 
         @wraps(func)
-        def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+        def gen_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:  # type: ignore[misc]
             LOGGER.debug("Spanned Generator Function")
             span = setup(args, kwargs)
 
@@ -293,7 +293,7 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
             if scond.behavior == SpanBehavior.ONLY_END_ON_EXCEPTION:
                 try:
                     with use_span(span, end_on_exit=False):
-                        for val in func(*args, **kwargs):
+                        for val in func(*args, **kwargs):  # type: ignore[attr-defined]
                             yield val
                 except:  # noqa: E722 # pylint: disable=bare-except
                     span.end()
@@ -302,14 +302,14 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
             elif scond.behavior in (SpanBehavior.END_ON_EXIT, SpanBehavior.DONT_END):
                 end_on_exit = bool(scond.behavior == SpanBehavior.END_ON_EXIT)
                 with use_span(span, end_on_exit=end_on_exit):
-                    for val in func(*args, **kwargs):
+                    for val in func(*args, **kwargs):  # type: ignore[attr-defined]
                         yield val
             # ELSE ------------------------------------------------------------
             else:
                 raise InvalidSpanBehavior(scond.behavior)
 
         @wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             LOGGER.debug("Spanned Async Function")
             span = setup(args, kwargs)
             is_iterator_class_anext_method = span.name.endswith(".__anext__")  # type: ignore[attr-defined]
@@ -320,7 +320,7 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
                 try:
                     with use_span(span, end_on_exit=False):
                         try:
-                            return await func(*args, **kwargs)
+                            return await func(*args, **kwargs)  # type: ignore[misc, no-any-return]
                         except StopAsyncIteration:
                             # intercept and temporarily suppress StopAsyncIteration
                             if not is_iterator_class_anext_method:
@@ -337,7 +337,7 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
                 end_on_exit = bool(scond.behavior == SpanBehavior.END_ON_EXIT)
                 with use_span(span, end_on_exit=end_on_exit):
                     try:
-                        return await func(*args, **kwargs)
+                        return await func(*args, **kwargs)  # type: ignore[misc, no-any-return]
                     except StopAsyncIteration:
                         # intercept and temporarily suppress StopAsyncIteration
                         if not is_iterator_class_anext_method:
@@ -351,7 +351,7 @@ def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
                 raise InvalidSpanBehavior(scond.behavior)
 
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper
+            return async_wrapper  # type: ignore[return-value]
         else:
             if inspect.isgeneratorfunction(func):
                 return gen_wrapper
@@ -373,7 +373,7 @@ def spanned(
     kind: SpanKind = SpanKind.INTERNAL,
     carrier: Optional[str] = None,
     carrier_relation: CarrierRelation = CarrierRelation.SPAN_CHILD,
-) -> Callable[..., Any]:
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorate to trace a function in a new span.
 
     Also, record an event with the function's name and the names of the
@@ -440,7 +440,7 @@ def respanned(
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
-) -> Callable[..., Any]:
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorate to trace a function with an existing span.
 
     Also, record an event with the function's name and the names of the

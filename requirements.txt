@@ -67,9 +67,9 @@ typing-extensions==4.1.1
     # via
     #   opentelemetry-sdk
     #   wipac-telemetry (setup.py)
-urllib3==1.26.8
+urllib3==1.26.9
     # via requests
-wipac-dev-tools==1.1.1
+wipac-dev-tools==1.1.3
     # via wipac-telemetry (setup.py)
 wrapt==1.14.0
     # via deprecated

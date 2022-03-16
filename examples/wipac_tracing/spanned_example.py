@@ -7,7 +7,7 @@ import logging
 import os
 import sys
 import time
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import coloredlogs  # type: ignore[import]
 
@@ -89,10 +89,10 @@ def example_7_attributes_from_sig_vals(  # pylint: disable=W0613,C0103,R0913
     a1: str,
     a2: str,
     a3: str = "",
-    a4: Optional[Dict[str, int]] = None,
+    a4: Optional[Dict[str, str]] = None,
     a5: int = -1,
     a6: Optional[List[str]] = None,
-    a7: Optional[List[int]] = None,
+    a7: Optional[Tuple[int, ...]] = None,
 ) -> None:
     """Print and log simple message."""
     msg = "Hello World!"
@@ -106,10 +106,10 @@ def example_8_attributes_only_explicit(  # pylint: disable=W0613,C0103,R0913
     a1: str,
     a2: str,
     a3: str = "",
-    a4: Optional[Dict[str, int]] = None,
+    a4: Optional[Dict[str, str]] = None,
     a5: int = -1,
     a6: Optional[List[str]] = None,
-    a7: Optional[List[int]] = None,
+    a7: Optional[Tuple[int, ...]] = None,
 ) -> None:
     """Print and log simple message."""
     msg = "Hello World!"
@@ -123,10 +123,10 @@ def example_9_attributes_explicit_and_args(  # pylint: disable=W0613,C0103,R0913
     a1: str,
     a2: str,
     a3: str = "",
-    a4: Optional[Dict[str, int]] = None,
+    a4: Optional[Dict[str, str]] = None,
     a5: int = -1,
     a6: Optional[List[str]] = None,
-    a7: Optional[List[int]] = None,
+    a7: Optional[Tuple[int, ...]] = None,
 ) -> None:
     """Print and log simple message."""
     msg = "Hello World!"
@@ -140,10 +140,10 @@ def example_10_attributes_explicit_and_whitelisted_args(  # pylint: disable=W061
     a1: str,
     a2: str,
     a3: str = "",
-    a4: Optional[Dict[str, int]] = None,
+    a4: Optional[Dict[str, str]] = None,
     a5: int = -1,
     a6: Optional[List[str]] = None,
-    a7: Optional[List[int]] = None,
+    a7: Optional[Tuple[int, ...]] = None,
 ) -> None:
     """Print and log simple message."""
     msg = "Hello World!"
@@ -157,10 +157,10 @@ def example_11_no_attributes(  # pylint: disable=W0613,C0103,R0913
     a1: str,
     a2: str,
     a3: str = "",
-    a4: Optional[Dict[str, int]] = None,
+    a4: Optional[Dict[str, str]] = None,
     a5: int = -1,
     a6: Optional[List[str]] = None,
-    a7: Optional[List[int]] = None,
+    a7: Optional[Tuple[int, ...]] = None,
 ) -> None:
     """Print and log simple message."""
     msg = "Hello World!"

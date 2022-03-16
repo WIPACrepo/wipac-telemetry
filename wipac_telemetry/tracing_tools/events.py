@@ -4,12 +4,12 @@
 import asyncio
 import inspect
 from functools import wraps
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from opentelemetry.trace import Span, get_current_span
 from opentelemetry.util import types
 
-from .utils import LOGGER, Args, FunctionInspector, Kwargs
+from .utils import LOGGER, FunctionInspector, P, T
 
 
 def evented(
@@ -18,7 +18,7 @@ def evented(
     all_args: bool = False,
     these: Optional[List[str]] = None,
     span: str = "",
-) -> Callable[..., Any]:
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorate to trace a function as a new event.
 
     The event is added under the current context's span.
@@ -33,8 +33,8 @@ def evented(
     Raises a `RuntimeError` if no current span is recording.
     """
 
-    def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
-        def setup(args: Args, kwargs: Kwargs) -> Tuple[Span, str, Kwargs]:
+    def inner_function(func: Callable[P, T]) -> Callable[P, T]:
+        def setup(args: P.args, kwargs: P.kwargs) -> Tuple[Span, str, types.Attributes]:  # type: ignore[name-defined]
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
             func_inspect = FunctionInspector(func, args, kwargs)
             _attrs = func_inspect.wrangle_otel_attributes(all_args, these, attributes)
@@ -51,34 +51,34 @@ def evented(
                 f"attributes={list(_attrs.keys()) if _attrs else []}"
             )
 
-            return _span, event_name, {"attributes": _attrs}
+            return _span, event_name, _attrs
 
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             LOGGER.debug("Evented Function")
-            _span, event_name, setup_kwargs = setup(args, kwargs)
-            _span.add_event(event_name, **setup_kwargs)
+            _span, event_name, _attrs = setup(args, kwargs)
+            _span.add_event(event_name, _attrs)
             return func(*args, **kwargs)
 
         @wraps(func)
-        def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+        def gen_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:  # type: ignore[misc]
             LOGGER.debug("Evented Generator Function")
-            _span, event_name, setup_kwargs = setup(args, kwargs)
-            _span.add_event(f"{event_name}#enter", **setup_kwargs)
-            for i, val in enumerate(func(*args, **kwargs)):
-                _span.add_event(f"{event_name}#{i}", **setup_kwargs)
+            _span, event_name, _attrs = setup(args, kwargs)
+            _span.add_event(f"{event_name}#enter", _attrs)
+            for i, val in enumerate(func(*args, **kwargs)):  # type: ignore[arg-type, var-annotated]
+                _span.add_event(f"{event_name}#{i}", _attrs)
                 yield val
-            _span.add_event(f"{event_name}#exit", **setup_kwargs)
+            _span.add_event(f"{event_name}#exit", _attrs)
 
         @wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             LOGGER.debug("Evented Async Function")
-            _span, event_name, setup_kwargs = setup(args, kwargs)
-            _span.add_event(event_name, **setup_kwargs)
-            return await func(*args, **kwargs)
+            _span, event_name, _attrs = setup(args, kwargs)
+            _span.add_event(event_name, _attrs)
+            return await func(*args, **kwargs)  # type: ignore[misc, no-any-return]
 
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper
+            return async_wrapper  # type: ignore[return-value]
         else:
             if inspect.isgeneratorfunction(func):
                 return gen_wrapper
