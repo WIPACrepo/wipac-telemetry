@@ -9,7 +9,7 @@ from typing import Callable, List, Optional, Tuple
 from opentelemetry.trace import Span, get_current_span
 from opentelemetry.util import types
 
-from .utils import LOGGER, FunctionInspector, Kwargs, P, T
+from .utils import LOGGER, FunctionInspector, P, T
 
 
 def evented(
@@ -34,7 +34,7 @@ def evented(
     """
 
     def inner_function(func: Callable[P, T]) -> Callable[P, T]:
-        def setup(args: P.args, kwargs: Kwargs) -> Tuple[Span, str, Kwargs]:
+        def setup(args: P.args, kwargs: P.kwargs) -> Tuple[Span, str, P.kwargs]:
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
             func_inspect = FunctionInspector(func, args, kwargs)
             _attrs = func_inspect.wrangle_otel_attributes(all_args, these, attributes)
