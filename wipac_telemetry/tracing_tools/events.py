@@ -4,12 +4,12 @@
 import asyncio
 import inspect
 from functools import wraps
-from typing import Any, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from opentelemetry.trace import Span, get_current_span
 from opentelemetry.util import types
 
-from .utils import LOGGER, Args, F, FunctionInspector, Kwargs
+from .utils import LOGGER, Args, F, FunctionInspector, Kwargs, T
 
 
 def evented(
@@ -18,7 +18,7 @@ def evented(
     all_args: bool = False,
     these: Optional[List[str]] = None,
     span: str = "",
-) -> F:
+) -> Callable[[F], F]:
     """Decorate to trace a function as a new event.
 
     The event is added under the current context's span.
@@ -54,14 +54,14 @@ def evented(
             return _span, event_name, {"attributes": _attrs}
 
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> T:
             LOGGER.debug("Evented Function")
             _span, event_name, setup_kwargs = setup(args, kwargs)
             _span.add_event(event_name, **setup_kwargs)
             return func(*args, **kwargs)
 
         @wraps(func)
-        def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+        def gen_wrapper(*args: Any, **kwargs: Any) -> T:  # type: ignore[misc]
             LOGGER.debug("Evented Generator Function")
             _span, event_name, setup_kwargs = setup(args, kwargs)
             _span.add_event(f"{event_name}#enter", **setup_kwargs)
@@ -71,7 +71,7 @@ def evented(
             _span.add_event(f"{event_name}#exit", **setup_kwargs)
 
         @wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> T:
             LOGGER.debug("Evented Async Function")
             _span, event_name, setup_kwargs = setup(args, kwargs)
             _span.add_event(event_name, **setup_kwargs)

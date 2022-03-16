@@ -31,19 +31,18 @@ LEGAL_ATTR_BASE_TYPES = (str, bool, int, float)
 Args = Tuple[Any, ...]
 Kwargs = Dict[str, Any]
 
-# fmt: off
+
 try:
     # 3.10+ decorator type preserve
     # https://stackoverflow.com/a/65681776
     from typing import ParamSpec  # type: ignore[attr-defined]
-    T = TypeVar("T")  # the callable/awaitable return type
-    P = ParamSpec("P")  # the callable parameters
-    F = Callable[P, Awaitable[T]]  # type: ignore[misc]  # pylint:disable=ungrouped-imports
+
 except ImportError:
-    # <3.10 decorator type preserve
     from typing_extensions import ParamSpec  # pylint:disable=ungrouped-imports
-    F = TypeVar("F", bound=Callable[..., Any])  # type: ignore[arg-type, misc]
-# fmt: on
+
+T = TypeVar("T")  # the callable/awaitable return type
+P = ParamSpec("P")  # the callable parameters
+F = Callable[P, T]  # type: ignore[misc]  # pylint:disable=ungrouped-imports
 
 
 # Classes/Functions ####################################################################

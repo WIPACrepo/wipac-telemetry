@@ -17,7 +17,7 @@ from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, us
 from opentelemetry.util import types
 
 from .propagations import extract_links_carrier
-from .utils import LOGGER, Args, F, FunctionInspector, Kwargs
+from .utils import LOGGER, Args, F, FunctionInspector, Kwargs, T
 
 ########################################################################################
 
@@ -243,7 +243,7 @@ def _spanned(scond: _SpanConductor) -> Callable[[F], F]:
                 return scond.get_span(FunctionInspector(func, args, kwargs))
 
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> T:
             LOGGER.debug("Spanned Function")
             span = setup(args, kwargs)
             is_iterator_class_next_method = span.name.endswith(".__next__")  # type: ignore[attr-defined]
@@ -285,7 +285,7 @@ def _spanned(scond: _SpanConductor) -> Callable[[F], F]:
                 raise InvalidSpanBehavior(scond.behavior)
 
         @wraps(func)
-        def gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+        def gen_wrapper(*args: Any, **kwargs: Any) -> T:  # type: ignore[misc]
             LOGGER.debug("Spanned Generator Function")
             span = setup(args, kwargs)
 
@@ -309,7 +309,7 @@ def _spanned(scond: _SpanConductor) -> Callable[[F], F]:
                 raise InvalidSpanBehavior(scond.behavior)
 
         @wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> T:
             LOGGER.debug("Spanned Async Function")
             span = setup(args, kwargs)
             is_iterator_class_anext_method = span.name.endswith(".__anext__")  # type: ignore[attr-defined]
