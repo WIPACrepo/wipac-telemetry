@@ -192,5 +192,5 @@ if __name__ == "__main__":
     # inst.end()  # NOTE: this is unnecessary -- we'd get a logging warning
 
     logging.warning("EXAMPLE #2 - FUNCTION DEMOS")
-    inst = injected_span_pass_to_instance()
-    # inst.span.end()  # NOTE: this is unnecessary -- we'd get a logging warning
+    inst_2 = injected_span_pass_to_instance()
+    # inst_2.span.end()  # NOTE: this is unnecessary -- we'd get a logging warning
