@@ -5,7 +5,7 @@ import asyncio
 import inspect
 from enum import Enum, auto
 from functools import wraps
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, cast
 
 try:
     from typing import Final, TypedDict
@@ -351,12 +351,12 @@ def _spanned(scond: _SpanConductor) -> Callable[[F], F]:
                 raise InvalidSpanBehavior(scond.behavior)
 
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper
+            return cast(F, async_wrapper)
         else:
             if inspect.isgeneratorfunction(func):
-                return gen_wrapper
+                return cast(F, gen_wrapper)
             else:
-                return wrapper
+                return cast(F, wrapper)
 
     return inner_function
 
