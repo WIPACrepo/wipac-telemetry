@@ -4,12 +4,12 @@
 import asyncio
 import inspect
 from functools import wraps
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from opentelemetry.trace import Span, get_current_span
 from opentelemetry.util import types
 
-from .utils import LOGGER, Args, FunctionInspector, Kwargs
+from .utils import LOGGER, Args, F, FunctionInspector, Kwargs
 
 
 def evented(
@@ -18,7 +18,7 @@ def evented(
     all_args: bool = False,
     these: Optional[List[str]] = None,
     span: str = "",
-) -> Callable[..., Any]:
+) -> F:
     """Decorate to trace a function as a new event.
 
     The event is added under the current context's span.
@@ -33,7 +33,7 @@ def evented(
     Raises a `RuntimeError` if no current span is recording.
     """
 
-    def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
+    def inner_function(func: F) -> F:
         def setup(args: Args, kwargs: Kwargs) -> Tuple[Span, str, Kwargs]:
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
             func_inspect = FunctionInspector(func, args, kwargs)

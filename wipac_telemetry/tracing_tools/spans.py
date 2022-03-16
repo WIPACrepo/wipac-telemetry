@@ -17,7 +17,7 @@ from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, us
 from opentelemetry.util import types
 
 from .propagations import extract_links_carrier
-from .utils import LOGGER, Args, FunctionInspector, Kwargs
+from .utils import LOGGER, Args, F, FunctionInspector, Kwargs
 
 ########################################################################################
 
@@ -232,10 +232,10 @@ class _ReuseSpanConductor(_SpanConductor):
 ########################################################################################
 
 
-def _spanned(scond: _SpanConductor) -> Callable[..., Any]:
+def _spanned(scond: _SpanConductor) -> Callable[[F], F]:
     """Handle decorating a function with either a new span or a reused span."""
 
-    def inner_function(func: Callable[..., Any]) -> Callable[..., Any]:
+    def inner_function(func: F) -> F:
         def setup(args: Args, kwargs: Kwargs) -> Span:
             if not isinstance(scond, (_NewSpanConductor, _ReuseSpanConductor)):
                 raise Exception(f"Undefined SpanConductor type: {scond}.")
@@ -373,7 +373,7 @@ def spanned(
     kind: SpanKind = SpanKind.INTERNAL,
     carrier: Optional[str] = None,
     carrier_relation: CarrierRelation = CarrierRelation.SPAN_CHILD,
-) -> Callable[..., Any]:
+) -> F:
     """Decorate to trace a function in a new span.
 
     Also, record an event with the function's name and the names of the
@@ -440,7 +440,7 @@ def respanned(
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
-) -> Callable[..., Any]:
+) -> F:
     """Decorate to trace a function with an existing span.
 
     Also, record an event with the function's name and the names of the
