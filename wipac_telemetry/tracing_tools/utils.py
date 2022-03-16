@@ -40,7 +40,7 @@ P = ParamSpec("P")  # the callable parameters
 class FunctionInspector:
     """A wrapper around a function and its introspection functionalities."""
 
-    def __init__(self, func: F, args: Args, kwargs: Kwargs):
+    def __init__(self, func: Callable[P, T], args: Args, kwargs: Kwargs):
         bound_args = inspect.signature(func).bind(*args, **kwargs)
         bound_args.apply_defaults()
         self.param_args = dict(bound_args.arguments)
