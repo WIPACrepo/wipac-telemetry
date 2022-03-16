@@ -3,7 +3,7 @@
 
 import copy
 import inspect
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
 
 from opentelemetry.trace import Span
 from opentelemetry.util import types

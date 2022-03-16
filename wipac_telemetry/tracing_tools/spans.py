@@ -373,7 +373,7 @@ def spanned(
     kind: SpanKind = SpanKind.INTERNAL,
     carrier: Optional[str] = None,
     carrier_relation: CarrierRelation = CarrierRelation.SPAN_CHILD,
-) -> F:
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorate to trace a function in a new span.
 
     Also, record an event with the function's name and the names of the
@@ -440,7 +440,7 @@ def respanned(
     attributes: types.Attributes = None,
     all_args: bool = False,
     these: Optional[List[str]] = None,
-) -> F:
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorate to trace a function with an existing span.
 
     Also, record an event with the function's name and the names of the
