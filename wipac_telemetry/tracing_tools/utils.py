@@ -24,6 +24,12 @@ LEGAL_ATTR_BASE_TYPES = (str, bool, int, float)
 T = TypeVar("T")  # the callable/awaitable return type
 P = ParamSpec("P")  # the callable parameters
 
+# NOTE: 'mypy' is behind 'typing' when it comes to a few things (hence the '# type: ignore's)
+# (1) Parsing ParamSpec:
+# https://github.com/python/typing/issues/794
+# https://github.com/python/mypy/issues/8645
+# (2) Encapsulating an async-func, generator, & sync-func as a single generic
+
 
 # Classes/Functions ####################################################################
 
