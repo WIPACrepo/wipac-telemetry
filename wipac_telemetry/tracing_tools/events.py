@@ -4,7 +4,7 @@
 import asyncio
 import inspect
 from functools import wraps
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, List, Optional, Tuple
 
 from opentelemetry.trace import Span, get_current_span
 from opentelemetry.util import types
@@ -78,12 +78,12 @@ def evented(
             return await func(*args, **kwargs)
 
         if asyncio.iscoroutinefunction(func):
-            return cast(F, async_wrapper)
+            return async_wrapper
         else:
             if inspect.isgeneratorfunction(func):
-                return cast(F, gen_wrapper)
+                return gen_wrapper
             else:
-                return cast(F, wrapper)
+                return wrapper
 
     return inner_function
 
