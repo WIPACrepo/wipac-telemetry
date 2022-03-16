@@ -3,18 +3,7 @@
 
 import copy
 import inspect
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union, cast
 
 from opentelemetry.trace import Span
 from opentelemetry.util import types
@@ -35,14 +24,14 @@ Kwargs = Dict[str, Any]
 try:
     # 3.10+ decorator type preserve
     # https://stackoverflow.com/a/65681776
+    # https://stackoverflow.com/a/71324646
     from typing import ParamSpec  # type: ignore[attr-defined]
-
 except ImportError:
+    # <3.10
     from typing_extensions import ParamSpec  # pylint:disable=ungrouped-imports
 
 T = TypeVar("T")  # the callable/awaitable return type
 P = ParamSpec("P")  # the callable parameters
-F = Callable[P, T]  # type: ignore[misc]  # pylint:disable=ungrouped-imports
 
 
 # Classes/Functions ####################################################################

@@ -4,12 +4,12 @@
 import asyncio
 import inspect
 from functools import wraps
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from opentelemetry.trace import Span, get_current_span
 from opentelemetry.util import types
 
-from .utils import LOGGER, Args, F, FunctionInspector, Kwargs, T
+from .utils import LOGGER, Args, FunctionInspector, Kwargs, P, T
 
 
 def evented(
@@ -18,7 +18,7 @@ def evented(
     all_args: bool = False,
     these: Optional[List[str]] = None,
     span: str = "",
-) -> Callable[[F], F]:
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorate to trace a function as a new event.
 
     The event is added under the current context's span.
@@ -33,7 +33,7 @@ def evented(
     Raises a `RuntimeError` if no current span is recording.
     """
 
-    def inner_function(func: F) -> F:
+    def inner_function(func: Callable[P, T]) -> Callable[P, T]:
         def setup(args: Args, kwargs: Kwargs) -> Tuple[Span, str, Kwargs]:
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
             func_inspect = FunctionInspector(func, args, kwargs)
@@ -54,14 +54,14 @@ def evented(
             return _span, event_name, {"attributes": _attrs}
 
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> T:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             LOGGER.debug("Evented Function")
             _span, event_name, setup_kwargs = setup(args, kwargs)
             _span.add_event(event_name, **setup_kwargs)
             return func(*args, **kwargs)
 
         @wraps(func)
-        def gen_wrapper(*args: Any, **kwargs: Any) -> T:  # type: ignore[misc]
+        def gen_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:  # type: ignore[misc]
             LOGGER.debug("Evented Generator Function")
             _span, event_name, setup_kwargs = setup(args, kwargs)
             _span.add_event(f"{event_name}#enter", **setup_kwargs)
@@ -71,7 +71,7 @@ def evented(
             _span.add_event(f"{event_name}#exit", **setup_kwargs)
 
         @wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> T:
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             LOGGER.debug("Evented Async Function")
             _span, event_name, setup_kwargs = setup(args, kwargs)
             _span.add_event(event_name, **setup_kwargs)
