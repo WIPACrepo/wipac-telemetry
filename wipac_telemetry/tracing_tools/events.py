@@ -34,7 +34,7 @@ def evented(
     """
 
     def inner_function(func: Callable[P, T]) -> Callable[P, T]:
-        def setup(args: P.args, kwargs: P.kwargs) -> Tuple[Span, str, types.Attributes]:
+        def setup(args: P.args, kwargs: P.kwargs) -> Tuple[Span, str, types.Attributes]:  # type: ignore[name-defined]
             event_name = name if name else func.__qualname__  # Ex: MyObj.method
             func_inspect = FunctionInspector(func, args, kwargs)
             _attrs = func_inspect.wrangle_otel_attributes(all_args, these, attributes)
@@ -65,7 +65,7 @@ def evented(
             LOGGER.debug("Evented Generator Function")
             _span, event_name, _attrs = setup(args, kwargs)
             _span.add_event(f"{event_name}#enter", _attrs)
-            for i, val in enumerate(func(*args, **kwargs)):
+            for i, val in enumerate(func(*args, **kwargs)):  # type: ignore[arg-type, var-annotated]
                 _span.add_event(f"{event_name}#{i}", _attrs)
                 yield val
             _span.add_event(f"{event_name}#exit", _attrs)
@@ -75,10 +75,10 @@ def evented(
             LOGGER.debug("Evented Async Function")
             _span, event_name, _attrs = setup(args, kwargs)
             _span.add_event(event_name, _attrs)
-            return await func(*args, **kwargs)
+            return await func(*args, **kwargs)  # type: ignore[misc, no-any-return]
 
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper
+            return async_wrapper  # type: ignore[return-value]
         else:
             if inspect.isgeneratorfunction(func):
                 return gen_wrapper

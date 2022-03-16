@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, c
 
 from opentelemetry.trace import Span
 from opentelemetry.util import types
+from typing_extensions import ParamSpec  # pylint:disable=ungrouped-imports
 
 from .config import LOGGER
 
@@ -17,15 +18,9 @@ LEGAL_ATTR_BASE_TYPES = (str, bool, int, float)
 
 # Types ################################################################################
 
-try:
-    # 3.10+ decorator type preserve
-    # https://stackoverflow.com/a/65681776
-    # https://stackoverflow.com/a/71324646
-    from typing import ParamSpec  # type: ignore[attr-defined]
-except ImportError:
-    # <3.10
-    from typing_extensions import ParamSpec  # pylint:disable=ungrouped-imports
 
+# https://stackoverflow.com/a/65681776
+# https://stackoverflow.com/a/71324646
 T = TypeVar("T")  # the callable/awaitable return type
 P = ParamSpec("P")  # the callable parameters
 
@@ -36,7 +31,7 @@ P = ParamSpec("P")  # the callable parameters
 class FunctionInspector:
     """A wrapper around a function and its introspection functionalities."""
 
-    def __init__(self, func: Callable[P, T], args: P.args, kwargs: P.kwargs):
+    def __init__(self, func: Callable[P, T], args: P.args, kwargs: P.kwargs):  # type: ignore[name-defined]
         bound_args = inspect.signature(func).bind(*args, **kwargs)
         bound_args.apply_defaults()
         self.param_args = dict(bound_args.arguments)
