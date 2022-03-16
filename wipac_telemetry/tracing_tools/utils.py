@@ -17,10 +17,6 @@ LEGAL_ATTR_BASE_TYPES = (str, bool, int, float)
 
 # Types ################################################################################
 
-Args = Tuple[Any, ...]
-Kwargs = Dict[str, Any]
-
-
 try:
     # 3.10+ decorator type preserve
     # https://stackoverflow.com/a/65681776
@@ -40,7 +36,7 @@ P = ParamSpec("P")  # the callable parameters
 class FunctionInspector:
     """A wrapper around a function and its introspection functionalities."""
 
-    def __init__(self, func: Callable[P, T], args: Args, kwargs: Kwargs):
+    def __init__(self, func: Callable[P, T], args: P.args, kwargs: P.kwargs):
         bound_args = inspect.signature(func).bind(*args, **kwargs)
         bound_args.apply_defaults()
         self.param_args = dict(bound_args.arguments)

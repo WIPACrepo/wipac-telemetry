@@ -17,7 +17,7 @@ from opentelemetry.trace import Span, SpanKind, get_current_span, get_tracer, us
 from opentelemetry.util import types
 
 from .propagations import extract_links_carrier
-from .utils import LOGGER, Args, FunctionInspector, Kwargs, P, T
+from .utils import LOGGER, FunctionInspector, P, T
 
 ########################################################################################
 
@@ -236,7 +236,7 @@ def _spanned(scond: _SpanConductor) -> Callable[[Callable[P, T]], Callable[P, T]
     """Handle decorating a function with either a new span or a reused span."""
 
     def inner_function(func: Callable[P, T]) -> Callable[P, T]:
-        def setup(args: Args, kwargs: Kwargs) -> Span:
+        def setup(args: P.args, kwargs: P.kwargs) -> Span:
             if not isinstance(scond, (_NewSpanConductor, _ReuseSpanConductor)):
                 raise Exception(f"Undefined SpanConductor type: {scond}.")
             else:
