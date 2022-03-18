@@ -14,7 +14,7 @@ coloredlogs==15.0.1
     # via wipac-telemetry (setup.py)
 deprecated==1.2.13
     # via opentelemetry-api
-googleapis-common-protos==1.55.0
+googleapis-common-protos==1.56.0
     # via
     #   opentelemetry-exporter-jaeger-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
@@ -69,7 +69,7 @@ typing-extensions==4.1.1
     #   wipac-telemetry (setup.py)
 urllib3==1.26.9
     # via requests
-wipac-dev-tools==1.1.3
+wipac-dev-tools==1.1.4
     # via wipac-telemetry (setup.py)
 wrapt==1.14.0
     # via deprecated
