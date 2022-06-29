@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Run all the example python files
 
 set -x
@@ -8,7 +10,7 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:="http://localh
 
 divider=`printf '=%.0s' {1..100}`
 
-for fpath in `find examples/wipac_tracing/ -name '*.py'`; do
+for fpath in `find examples/wipac_tracing/ -maxdepth 1 -name '*.py'`; do
 	fname=`basename $fpath`
 	if [ $fname == "span_client_server_http.py" ] || [ $fname == "span_peer_to_peer_example.py" ]; then
 		continue
