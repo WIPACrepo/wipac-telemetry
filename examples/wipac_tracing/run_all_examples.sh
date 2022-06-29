@@ -23,10 +23,12 @@ echo $divider
 echo "examples/wipac_tracing/span_client_server_http.py"
 python examples/wipac_tracing/span_client_server_http.py server &
 python examples/wipac_tracing/span_client_server_http.py client &
-wait
+wait -n
+wait -n
 
 echo $divider
 echo "examples/wipac_tracing/span_peer_to_peer_example.py"
 python examples/wipac_tracing/span_peer_to_peer_example.py hank george &
 python examples/wipac_tracing/span_peer_to_peer_example.py george hank &
-wait
+wait -n
+wait -n
