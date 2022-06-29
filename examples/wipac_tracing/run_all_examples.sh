@@ -12,7 +12,7 @@ divider=`printf '=%.0s' {1..100}`
 
 py_files=`find examples/wipac_tracing/ -maxdepth 1 -name '*.py'`
 
-for fpath in py_files; do
+for fpath in $py_files; do
 	fname=`basename $fpath`
 	if [ $fname == "span_client_server_http.py" ] || [ $fname == "span_peer_to_peer_example.py" ]; then
 		continue
