@@ -1,11 +1,18 @@
+#!/bin/bash
+
 # Run all the example python files
+
+set -x
+set -e
 
 export OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:="http://localhost:4318/v1/traces"}
 # export WIPACTEL_EXPORT_STDOUT=${WIPACTEL_EXPORT_STDOUT:="TRUE"}
 
 divider=`printf '=%.0s' {1..100}`
 
-for fpath in `find examples/wipac_tracing/ -name '*.py'`; do
+py_files=`find examples/wipac_tracing/ -maxdepth 1 -name '*.py'`
+
+for fpath in $py_files; do
 	fname=`basename $fpath`
 	if [ $fname == "span_client_server_http.py" ] || [ $fname == "span_peer_to_peer_example.py" ]; then
 		continue
@@ -22,10 +29,12 @@ echo $divider
 echo "examples/wipac_tracing/span_client_server_http.py"
 python examples/wipac_tracing/span_client_server_http.py server &
 python examples/wipac_tracing/span_client_server_http.py client &
-wait
+wait -n
+wait -n
 
 echo $divider
 echo "examples/wipac_tracing/span_peer_to_peer_example.py"
 python examples/wipac_tracing/span_peer_to_peer_example.py hank george &
 python examples/wipac_tracing/span_peer_to_peer_example.py george hank &
-wait
+wait -n
+wait -n

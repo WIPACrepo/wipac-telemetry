@@ -13,7 +13,7 @@ if "examples" not in os.listdir():
     raise RuntimeError("Script needs to be ran from root of repository.")
 
 sys.path.append(".")
-import wipac_telemetry.tracing_tools as wtt  # noqa: E402 # pylint: disable=C0413,E0401
+import wipac_telemetry.tracing_tools as wtt  # noqa: E402 # pylint: disable=C0413,E0401 # isort: skip
 
 ########################################################################################
 
