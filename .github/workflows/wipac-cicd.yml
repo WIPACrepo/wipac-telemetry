@@ -4,7 +4,9 @@
 
 name: wipac ci/cd
 
-on: [push]
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
 
