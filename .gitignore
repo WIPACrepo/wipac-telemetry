@@ -130,3 +130,7 @@ dmypy.json
 
 # project specifics
 /examples/telemetry-server/example-data/tempo
+
+
+# wipac-dev-py-setup-action
+!dependencies*.log
