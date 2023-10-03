@@ -1,6 +1,0 @@
-opentelemetry-instrumentation-flask
-opentelemetry-instrumentation-requests
-opentelemetry-exporter-otlp==1.6.2
-opentelemetry-exporter-otlp-proto-grpc==1.6.2
-opentelemetry-propagator-b3==1.6.2
-pika
