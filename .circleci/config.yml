@@ -10,7 +10,7 @@ jobs:
           - checkout
           - run: dockerize -wait tcp://localhost:5672 -timeout 1m
           - run: |
-              pip install -r requirements.txt
+              pip install .
               pip install pika
               ./examples/wipac_tracing/run_all_examples.sh
 
