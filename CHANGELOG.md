@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.3.1 (2024-10-09)
+
+### Other
+
+* Add Support for Python 3.13 ([#64](https://github.com/WIPACrepo/wipac-telemetry/issues/64)) ([`9f19073`](https://github.com/WIPACrepo/wipac-telemetry/commit/9f19073ea5b3d6ca9fd2b83355b842fd2330ec83))
+
 ## v0.3.0 (2023-10-03)
 
 
